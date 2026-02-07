@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# C++ Build Artifacts
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Compiled Framework
+python/my_framework/*.so
+python/my_framework/*.pyd
+tests/*.so
+*.so
+
+# Output Directory
+results/
+
+# Temporary Data
+*.pkl
+
+# Logs
+*.log
+*.csv
+
+# Plots
+*.png
+
+# Text files
+*.txt
+
+# Editor/IDE
+.DS_Store
+.vscode/
+.idea/
+.env
+
+# Jupyter Notebooks
+.ipynb_checkpoints

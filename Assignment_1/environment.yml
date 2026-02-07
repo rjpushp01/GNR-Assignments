@@ -1,0 +1,17 @@
+name: gnr638_ass
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - numpy
+  - matplotlib
+  - seaborn
+  - opencv
+  - pybind11
+  - cmake
+  - make
+  - pip
+  - pytest
+  - scikit-learn
+  - tqdm
