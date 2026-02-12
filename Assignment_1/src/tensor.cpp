@@ -57,3 +57,10 @@ Tensor Tensor::mul(const Tensor& other) const {
     }
     return Tensor(shape, result_data);
 }
+
+Tensor Tensor::reshape(const std::vector<int>& new_shape) const {
+    size_t new_total = 1;
+    for (int s : new_shape) new_total *= s;
+    if (new_total != size()) throw std::runtime_error("Reshape size mismatch");
+    return Tensor(new_shape, data); 
+}

@@ -16,4 +16,5 @@ public:
     // Basic Ops (In-place/New Tensor logic to be decided, simpler to return new Tensors usually)
     Tensor add(const Tensor& other) const;
     Tensor mul(const Tensor& other) const;
+    Tensor reshape(const std::vector<int>& new_shape) const;
 };

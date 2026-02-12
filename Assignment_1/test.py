@@ -1,83 +1,150 @@
 import sys
 import os
-sys.path.append(os.path.abspath('python'))
+script_dir = os.path.dirname(os.path.abspath(__file__))
+python_path = os.path.join(script_dir, 'python')
+if python_path not in sys.path:
+    sys.path.insert(0, python_path)
+
 import argparse
-import numpy as np
+import time
 import pickle
-import os
-
-from my_framework.data import DataLoader
+import my_backend as mb
 from my_framework.models import MNIST_Model, CIFAR_Model
-from my_framework.tensor import Tensor
-
-def load_model(path):
-    with open(path, 'rb') as f:
-        params = pickle.load(f)
-    return params
+from my_framework.data import DataLoader
+from my_framework.model_utils import print_model_summary
 
 def accuracy(outputs, labels):
-    preds = np.argmax(outputs.numpy(), axis=1)
-    targets = labels.numpy().astype(int)
-    return np.mean(preds == targets)
+    # Use C++ argmax
+    preds = mb.ops.argmax(outputs.data, 1) # List of ints
+    targets = labels.to_list()
+    
+    correct = 0
+    for p, t in zip(preds, targets):
+        if p == int(t):
+            correct += 1
+    return correct / len(targets)
+
+def load_model(path, model):
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Model file {path} not found.")
+        
+    print(f"Loading model from {path}...")
+    with open(path, 'rb') as f:
+        params = pickle.load(f)
+        
+    for name, layer in model.__dict__.items():
+        # Load Weight
+        w_key = name + '.weight'
+        if hasattr(layer, 'weight') and w_key in params:
+            p = params[w_key]
+            # p is {'data': list, 'shape': list}
+            # Assign new C++ Tensor to layer.weight.data
+            layer.weight.data = mb.Tensor(p['shape'], p['data'])
+            
+        # Load Bias
+        b_key = name + '.bias'
+        if hasattr(layer, 'bias') and b_key in params:
+            p = params[b_key]
+            layer.bias.data = mb.Tensor(p['shape'], p['data'])
+            
+    print("Model loaded successfully.")
 
 def test(args):
-    print(f"Loading data from {args.data_path} for testing...")
+    # ================================================================
+    #  DATASET LOADING
+    # ================================================================
+    print("=" * 70)
+    print(f"  TESTING DATASET: {args.dataset.upper()}")
+    print("=" * 70)
+
+    print(f"Loading test data from '{args.data_path}' ...")
+    load_start = time.time()
     test_loader = DataLoader(args.data_path, batch_size=args.batch_size, shuffle=False, mode='test')
-    
+    load_time = time.time() - load_start
+    print(f"  Test data loaded in {load_time:.2f}s")
+
+    # ================================================================
+    #  MODEL INITIALIZATION
+    # ================================================================
     if args.dataset == 'mnist':
         model = MNIST_Model()
+        input_shape = (1, 32, 32)
     else:
         model = CIFAR_Model()
-        
-    print(f"Loading model from {args.model_path}...")
-    params = load_model(args.model_path)
-    
-    import my_backend as mb 
-    
-    # Load parameters into model
-    for name, value in model.__dict__.items():
-        if hasattr(value, 'weight') and (name + '.weight') in params:
-             # Convert numpy array back to C++ Tensor
-             param_data = params[name + '.weight']
-             # param_data is (Out, In, H, W) for Conv or (In, Out) for Linear?
-             # Wait, Tensor constructor takes (shape, flat_data)
-             # The saved params are numpy arrays.
-             shape = list(param_data.shape)
-             flat_data = param_data.flatten().tolist()
-             value.weight.data = mb.Tensor(shape, flat_data)
-             
-        if hasattr(value, 'bias') and (name + '.bias') in params:
-             param_data = params[name + '.bias']
-             shape = list(param_data.shape)
-             flat_data = param_data.flatten().tolist()
-             value.bias.data = mb.Tensor(shape, flat_data)
-             
-    print("Starting Evaluation...")
+        input_shape = (3, 32, 32)
+
+    # Load Weights
+    load_model(args.model_path, model)
+    model.eval()
+
+    # Print Summary for Reporting
+    print("\nModel Summary:")
+    model_summary = print_model_summary(model, input_shape)
+
+    # ================================================================
+    #  EVALUATION
+    # ================================================================
     total_acc = 0.0
     num_batches = 0
+    total_samples = 0
     
+    print("\nStarting evaluation...")
+    eval_start = time.time()
+    
+    # Iterate
     for images, labels in test_loader:
+        # Forward
         outputs = model(images)
+        
+        # Accuracy
         acc = accuracy(outputs, labels)
+        
         total_acc += acc
         num_batches += 1
+        total_samples += len(labels.to_list())
         
+        if num_batches % 10 == 0:
+            print(f"  Batch {num_batches}: Acc = {acc:.4f}")
+
+    eval_time = time.time() - eval_start
     avg_acc = total_acc / num_batches if num_batches > 0 else 0
-    print(f"Test Accuracy: {avg_acc:.4f}")
-    
-    # Save results to file
-    if not os.path.exists("results"):
-        os.makedirs("results")
-        
-    with open("results/test_results.txt", "a") as f:
-        f.write(f"Dataset: {args.dataset}, Model Path: {args.model_path}, Accuracy: {avg_acc:.4f}\n")
-    print("Result saved to results/test_results.txt")
+
+    print("\n" + "=" * 70)
+    print("  TEST RESULTS")
+    print("=" * 70)
+    print(f"  Dataset           : {args.dataset.upper()}")
+    print(f"  Model path        : {args.model_path}")
+    print(f"  Test samples      : {test_loader.num_samples}")
+    print(f"  Test Accuracy     : {avg_acc:.4f}  ({avg_acc*100:.2f}%)")
+    print(f"  Data loading time : {load_time:.2f}s")
+    print(f"  Evaluation time   : {eval_time:.2f}s")
+    print(f"  Trainable params  : {model_summary['total_params']:,}")
+    print(f"  MACs / forward    : {model_summary['total_macs']:,}")
+    print(f"  FLOPs / forward   : {model_summary['total_flops']:,}")
+    print("=" * 70)
+
+    # Save results
+    result_file = "results/test_results.txt"
+    with open(result_file, "a") as f:
+        f.write(f"\n{'=' * 60}\n")
+        f.write(f"Evaluation — {args.dataset.upper()}\n")
+        f.write(f"{'=' * 60}\n")
+        f.write(f"Model path        : {args.model_path}\n")
+        f.write(f"Test samples      : {test_loader.num_samples}\n")
+        f.write(f"Test Accuracy     : {avg_acc:.4f}  ({avg_acc*100:.2f}%)\n")
+        f.write(f"Data loading time : {load_time:.2f}s\n")
+        f.write(f"Evaluation time   : {eval_time:.2f}s\n")
+        f.write(f"Trainable params  : {model_summary['total_params']:,}\n")
+        f.write(f"MACs / forward    : {model_summary['total_macs']:,}\n")
+        f.write(f"FLOPs / forward   : {model_summary['total_flops']:,}\n")
+    print(f"\nResults appended to {result_file}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', type=str, required=True, choices=['mnist', 'cifar'], help='Dataset type')
-    parser.add_argument('--data_path', type=str, required=True, help='Path to dataset root')
-    parser.add_argument('--model_path', type=str, required=True, help='Path to saved model pickle')
+    parser.add_argument('--dataset', type=str, required=True, choices=['mnist', 'cifar'])
+    parser.add_argument('--data_path', type=str, required=True)
+    parser.add_argument('--model_path', type=str, required=True)
     parser.add_argument('--batch_size', type=int, default=32)
     
     args = parser.parse_args()

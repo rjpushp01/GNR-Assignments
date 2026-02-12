@@ -3,21 +3,23 @@
 #include <algorithm>
 #include <stdexcept>
 #include <iostream>
+#include <opencv2/opencv.hpp>
+#include <random>
+#include <omp.h> // Ensure OpenMP is available if using #pragma omp
 
 namespace ops {
 
-// Utility: Im2Col
+// Utility: Im2Col (Same as before)
 void im2col(const std::vector<float>& input_data, std::vector<float>& col_data,
             int N, int C, int H, int W, int KH, int KW, int stride, int padding,
             int H_out, int W_out) {
             
-    int col_width = C * KH * KW; // K_col
-    // Parallelize batch loop
-    #pragma omp parallel for 
+    int col_width = C * KH * KW; 
+    // #pragma omp parallel for 
     for (int n = 0; n < N; ++n) {
         for (int h_out = 0; h_out < H_out; ++h_out) {
             for (int w_out = 0; w_out < W_out; ++w_out) {
-                int col_row_idx = n * (H_out * W_out) + h_out * W_out + w_out; // M_col index
+                int col_row_idx = n * (H_out * W_out) + h_out * W_out + w_out; 
                 
                 int col_idx = 0;
                 for (int c = 0; c < C; ++c) {
@@ -41,16 +43,14 @@ void im2col(const std::vector<float>& input_data, std::vector<float>& col_data,
     }
 }
 
-// Utility: Col2Im
+// Utility: Col2Im (Same as before)
 void col2im(const std::vector<float>& col_data, std::vector<float>& input_diff,
             int N, int C, int H, int W, int KH, int KW, int stride, int padding,
             int H_out, int W_out) {
             
     int col_width = C * KH * KW;
     int input_hw = H * W;
-    
-    // Initialize input_diff to 0 (done in caller)
-    
+            
     for (int n = 0; n < N; ++n) {
         for (int h_out = 0; h_out < H_out; ++h_out) {
             for (int w_out = 0; w_out < W_out; ++w_out) {
@@ -65,7 +65,9 @@ void col2im(const std::vector<float>& col_data, std::vector<float>& input_diff,
                             int w_in = w_out * stride - padding + kw;
                             
                             if (h_in >= 0 && h_in < H && w_in >= 0 && w_in < W) {
-                                float val = col_data[col_row_idx * col_width + col_idx];
+                                float val = col_data[col_row_idx * col_width + col_idx]; // Read col
+                                // Add to input implementation (atomic add if parallel?)
+                                // For now serial
                                 input_diff[n*(C*input_hw) + c*input_hw + h_in*W + w_in] += val;
                             }
                             col_idx++;
@@ -132,22 +134,13 @@ std::pair<Tensor, Tensor> conv2d(const Tensor& input, const Tensor& kernel, int 
     Tensor col_tensor({M_col, K_col}, col_data);
 
     // Prepare Kernel as Matrix [OutC, K_col]
-    // Kernel layout is [OutC, InC, KH, KW], which flattens directly to Row-Major [OutC, K_col].
-    // We want Output = Col * Kernel^T -> [M_col, OutC]
-    // So if K is [OutC, K_col], K^T is [K_col, OutC].
-    // We construct MatMul(Col, K^T).
-    
-    // Step 1: Transpose Kernel Matrix
-    // Treat as 2D [OutC, K_col]
     Tensor kernel_flat({OutC, K_col}, kernel.data); 
     Tensor kernel_t = transpose(kernel_flat); // [K_col, OutC]
     
-    // Step 2: MatMul
+    // MatMul
     Tensor result_mm = matmul(col_tensor, kernel_t); // [M_col, OutC]
 
-    // Step 3: Reshape/Permute to [N, OutC, H_out, W_out]
-    // result_mm is [N * H_out * W_out, OutC] -> corresponds to [N, H_out, W_out, OutC].
-    // Needs permute from (N, H, W, C) -> (N, C, H, W)
+    // Reshape/Permute to [N, OutC, H_out, W_out]
     std::vector<float> out_data(result_mm.size());
     const auto& res_d = result_mm.data;
     
@@ -173,7 +166,7 @@ std::pair<Tensor, Tensor> maxpool2d(const Tensor& input, int k, int stride) {
     int W_out = (W - k) / stride + 1;
 
     Tensor out({N, C, H_out, W_out}, std::vector<float>(N*C*H_out*W_out));
-    Tensor indices({N, C, H_out, W_out}, std::vector<float>(N*C*H_out*W_out)); // Store flat index as float
+    Tensor indices({N, C, H_out, W_out}, std::vector<float>(N*C*H_out*W_out));
 
     for (int n=0; n<N; ++n)
         for (int c=0; c<C; ++c)
@@ -221,12 +214,7 @@ Tensor matmul_backward_other(const Tensor& grad_output, const Tensor& input) {
     return matmul(transpose(input), grad_output);
 }
 
-// Optimized Conv2d Backward using saved Col Tensor
 Tensor conv2d_backward_input(const Tensor& grad_output, const Tensor& kernel, int stride, int padding, const Tensor& input_shape_ref) {
-    // dL/dX = Col2Im( dL/dY * W )
-    // grad_output: [N, OutC, H_out, W_out]
-    // kernel: [OutC, InC, KH, KW]
-    
     int N = input_shape_ref.shape[0];
     int C = input_shape_ref.shape[1];
     int H = input_shape_ref.shape[2];
@@ -238,8 +226,6 @@ Tensor conv2d_backward_input(const Tensor& grad_output, const Tensor& kernel, in
     int KW = kernel.shape[3];
     int K_col = C * KH * KW;
 
-    // Reshape grad to [N, H_out, W_out, OutC] -> [M_col, OutC]
-    // Permute (N, C, H, W) -> (N, H, W, C)
     std::vector<float> grad_flat(grad_output.size());
     for(int n=0; n<N; ++n)
         for(int h=0; h<H_out; ++h)
@@ -249,13 +235,9 @@ Tensor conv2d_backward_input(const Tensor& grad_output, const Tensor& kernel, in
                 }
     Tensor grad_mat({N*H_out*W_out, OutC}, grad_flat);
     
-    // Kernel Matrix [OutC, K_col].
-    // We need dCol = GradMat * KernelMat -> [M_col, OutC] * [OutC, K_col] -> [M_col, K_col]
     Tensor kernel_mat({OutC, K_col}, kernel.data); 
+    Tensor dCol = matmul(grad_mat, kernel_mat); 
     
-    Tensor dCol = matmul(grad_mat, kernel_mat); // [M_col, K_col]
-    
-    // Col2Im
     std::vector<float> dInput_data(N*C*H*W, 0.0f);
     col2im(dCol.data, dInput_data, N, C, H, W, KH, KW, stride, padding, H_out, W_out);
     
@@ -263,17 +245,11 @@ Tensor conv2d_backward_input(const Tensor& grad_output, const Tensor& kernel, in
 }
 
 Tensor conv2d_backward_kernel(const Tensor& grad_output, const Tensor& input, const Tensor& col_matrix, int stride, int padding) {
-    // dL/dW = Col^T * dL/dY
-    // col_matrix: [M_col, K_col] (Saved from Forward)
-    // grad_output (reshaped as dY_mat): [M_col, OutC]
-    
     int OutC = grad_output.shape[1];
     int N = grad_output.shape[0];
     int H_out = grad_output.shape[2];
     int W_out = grad_output.shape[3];
-    int K_col = col_matrix.shape[1];
 
-    // Reshape grad as usual
     std::vector<float> grad_flat(grad_output.size());
     for(int n=0; n<N; ++n)
         for(int h=0; h<H_out; ++h)
@@ -281,32 +257,16 @@ Tensor conv2d_backward_kernel(const Tensor& grad_output, const Tensor& input, co
                 for(int c=0; c<OutC; ++c) {
                     grad_flat[n*(H_out*W_out*OutC) + h*(W_out*OutC) + w*OutC + c] = grad_output.data[n*(OutC*H_out*W_out) + c*(H_out*W_out) + h*W_out + w];
                 }
-    Tensor grad_mat({N*H_out*W_out, OutC}, grad_flat); // [M_col, OutC]
+    Tensor grad_mat({N*H_out*W_out, OutC}, grad_flat); 
     
-    // dW_trans = Col^T * Grad -> [K_col, M_col] * [M_col, OutC] -> [K_col, OutC]
     Tensor dW_trans = matmul(transpose(col_matrix), grad_mat);
+    Tensor dW = transpose(dW_trans); 
     
-    // dW = Transpose(dW_trans) -> [OutC, K_col].
-    // Kernel is stored as [OutC, InC, KH, KW] which is [OutC, K_col] flat.
-    Tensor dW = transpose(dW_trans); // [OutC, K_col] which matches flat memory layout of [OutC, InC, KH, KW]
-    
-    // Reshape metadata is handled by Python wrapper usually, or we return tensor with correct shape logic?
-    // We return flat data basically, shape handled by caller/wrapper. But let's verify C++ shape.
-    // We just return [OutC, InC, KH, KW] shape from python side logic?
-    // My C++ conv_backward signature doesn't take 'kernel_size', so I can't reconstruct shape here easily inside C++ without extra args.
-    // Wait, I updated signature to not take kernel size?
-    // My header has: `conv2d_backward_kernel(grad, input_shape, col_matrix, ...)`
-    // Actually, I just return the dW tensor. The Python wrapper knows the shape of W. 
-    // Let's modify tensor.py to reshape it.
-    // Or just return flat/matrix shape and let tensor wrapper raw-assign?
     return dW; 
 }
 
 
 Tensor maxpool2d_backward(const Tensor& grad_output, const Tensor& input_shape_ref, const Tensor& indices) {
-    // indices stores flat index of max.
-    // grad_output and indices have same shape [N, C, H_out, W_out]
-    
     Tensor dx(input_shape_ref.shape, std::vector<float>(input_shape_ref.size(), 0.0f));
     
     for (size_t i = 0; i < grad_output.size(); ++i) {
@@ -368,4 +328,292 @@ void adam_step(Tensor& param, const Tensor& grad, Tensor& m, Tensor& v, float lr
     }
 }
 
+void adam_step_wd(Tensor& param, const Tensor& grad, Tensor& m, Tensor& v, float lr, float beta1, float beta2, float eps, int t, float weight_decay) {
+    if (param.size() != grad.size()) throw std::runtime_error("Adam size mismatch");
+    float bc1 = 1.0f - std::pow(beta1, t);
+    float bc2 = 1.0f - std::pow(beta2, t);
+    for (size_t i = 0; i < param.size(); ++i) {
+        // AdamW: decoupled weight decay applied directly to params
+        float g = grad.data[i];
+        m.data[i] = beta1 * m.data[i] + (1.0f - beta1) * g;
+        v.data[i] = beta2 * v.data[i] + (1.0f - beta2) * g * g;
+        float m_hat = m.data[i] / bc1;
+        float v_hat = v.data[i] / bc2;
+        param.data[i] -= lr * (m_hat / (std::sqrt(v_hat) + eps) + weight_decay * param.data[i]);
+    }
 }
+
+// ===================================
+//  Dropout
+// ===================================
+std::pair<Tensor, Tensor> dropout(const Tensor& input, float p, bool training) {
+    if (!training || p <= 0.0f) {
+        // No dropout during eval or if p=0
+        return {Tensor(input.shape, input.data), ones(input.shape)};
+    }
+    
+    size_t sz = input.size();
+    std::vector<float> out_data(sz);
+    std::vector<float> mask_data(sz);
+    
+    static thread_local std::mt19937 gen(std::random_device{}());
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+    
+    float scale = 1.0f / (1.0f - p); // Inverted dropout scaling
+    
+    for (size_t i = 0; i < sz; ++i) {
+        if (dist(gen) >= p) {
+            mask_data[i] = scale;
+            out_data[i] = input.data[i] * scale;
+        } else {
+            mask_data[i] = 0.0f;
+            out_data[i] = 0.0f;
+        }
+    }
+    
+    return {Tensor(input.shape, out_data), Tensor(input.shape, mask_data)};
+}
+
+Tensor dropout_backward(const Tensor& grad_output, const Tensor& mask) {
+    size_t sz = grad_output.size();
+    std::vector<float> grad_data(sz);
+    for (size_t i = 0; i < sz; ++i) {
+        grad_data[i] = grad_output.data[i] * mask.data[i];
+    }
+    return Tensor(grad_output.shape, grad_data);
+}
+
+// ===================================
+//  Data Augmentation: Random Horizontal Flip
+// ===================================
+Tensor random_horizontal_flip(const Tensor& input, float p) {
+    // input: [N, C, H, W]
+    if (input.shape.size() != 4) throw std::runtime_error("random_horizontal_flip requires 4D tensor [N,C,H,W]");
+    
+    int N = input.shape[0];
+    int C = input.shape[1];
+    int H = input.shape[2];
+    int W = input.shape[3];
+    
+    std::vector<float> out_data = input.data; // Copy
+    
+    static thread_local std::mt19937 gen(std::random_device{}());
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+    
+    for (int n = 0; n < N; ++n) {
+        if (dist(gen) < p) {
+            // Flip this sample horizontally
+            for (int c = 0; c < C; ++c) {
+                for (int h = 0; h < H; ++h) {
+                    for (int w = 0; w < W / 2; ++w) {
+                        int idx1 = n * (C * H * W) + c * (H * W) + h * W + w;
+                        int idx2 = n * (C * H * W) + c * (H * W) + h * W + (W - 1 - w);
+                        std::swap(out_data[idx1], out_data[idx2]);
+                    }
+                }
+            }
+        }
+    }
+    
+    return Tensor(input.shape, out_data);
+}
+
+// ===================================
+//  New Operations for NumPy-Free Backend
+// ===================================
+
+Tensor load_image(const std::string& path) {
+    // Read using OpenCV C++
+    cv::Mat img = cv::imread(path, cv::IMREAD_COLOR);
+    if (img.empty()) {
+        std::cerr << "Warning: Could not read image " << path << std::endl;
+        return Tensor({0}, {}); 
+    }
+
+    // Convert to float [0, 1]
+    cv::Mat float_img;
+    img.convertTo(float_img, CV_32F, 1.0/255.0);
+
+    // Get C, H, W
+    int H = float_img.rows;
+    int W = float_img.cols;
+    int C = float_img.channels();
+    
+    std::vector<float> data;
+    data.reserve(C * H * W);
+
+    // HWC -> CHW
+    if (C == 3) {
+         std::vector<cv::Mat> channels(3);
+         cv::split(float_img, channels);
+         for (int i=0; i<3; ++i) {
+             float* ptr = (float*)channels[i].data;
+             data.insert(data.end(), ptr, ptr + H*W);
+         }
+    } else {
+         if (float_img.isContinuous()) {
+             float* ptr = (float*)float_img.data;
+             data.assign(ptr, ptr + H*W);
+         } else {
+              for(int i=0; i<H; ++i) {
+                  float* ptr = float_img.ptr<float>(i);
+                  data.insert(data.end(), ptr, ptr + W);
+              }
+         }
+    }
+    return Tensor({C, H, W}, data);
+}
+
+Tensor load_image_batch(const std::vector<std::string>& paths, int C, int H, int W) {
+    int N = paths.size();
+    long long total_size = (long long)N * C * H * W; // Avoid overflow
+    std::vector<float> batch_data;
+    batch_data.reserve(total_size);
+    
+    for (const auto& path : paths) {
+        cv::Mat img = cv::imread(path, cv::IMREAD_COLOR);
+        
+        // Handle Missing
+        if (img.empty()) {
+             // Zero padding
+             batch_data.insert(batch_data.end(), C*H*W, 0.0f);
+             continue;
+        }
+
+        // Handle Channel conversion
+        if (C == 1 && img.channels() == 3) {
+             cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
+        } else if (C == 3 && img.channels() == 1) {
+             cv::cvtColor(img, img, cv::COLOR_GRAY2BGR);
+        }
+        
+        // Handle Resize
+        if (img.rows != H || img.cols != W) {
+             cv::resize(img, img, cv::Size(W, H));
+        }
+        
+        img.convertTo(img, CV_32F, 1.0/255.0);
+        
+        // HWC -> CHW
+        if (C == 3) {
+             std::vector<cv::Mat> channels(3);
+             cv::split(img, channels);
+             for(int c=0; c<3; ++c) {
+                  float* ptr = (float*)channels[c].data;
+                  batch_data.insert(batch_data.end(), ptr, ptr + H*W);
+             }
+        } else {
+             // Grayscale
+             float* ptr = (float*)img.data;
+             batch_data.insert(batch_data.end(), ptr, ptr + H*W);
+        }
+    }
+    
+    return Tensor({N, C, H, W}, batch_data);
+}
+
+
+std::vector<int> argmax(const Tensor& input, int axis) {
+    if (axis != 1) throw std::runtime_error("argmax only matches axis=1 for now");
+    
+    int N = input.shape[0];
+    int C = input.shape[1];
+    
+    std::vector<int> result(N);
+    for (int n=0; n<N; ++n) {
+        float max_val = -1e30f;
+        int max_idx = 0;
+        for (int c=0; c<C; ++c) {
+             if (input.data[n*C + c] > max_val) {
+                 max_val = input.data[n*C+c];
+                 max_idx = c;
+             }
+        }
+        result[n] = max_idx;
+    }
+    return result;
+}
+
+Tensor random_uniform(const std::vector<int>& shape, float min_val, float max_val) {
+    size_t size = 1;
+    for(int s : shape) size *= s;
+    
+    std::vector<float> data(size);
+    std::mt19937 gen(std::random_device{}());
+    std::uniform_real_distribution<float> dist(min_val, max_val);
+    
+    for(size_t i=0; i<size; ++i) data[i] = dist(gen);
+    
+    return Tensor(shape, data);
+}
+
+Tensor zeros(const std::vector<int>& shape) {
+    size_t size = 1;
+    for(int s : shape) size *= s;
+    return Tensor(shape, std::vector<float>(size, 0.0f));
+}
+
+Tensor ones(const std::vector<int>& shape) {
+    size_t size = 1;
+    for(int s : shape) size *= s;
+    return Tensor(shape, std::vector<float>(size, 1.0f));
+}
+
+Tensor random_crop_with_padding(const Tensor& input, int pad, float p) {
+    // input: [N, C, H, W]
+    // With probability p per image: zero-pad by `pad` on each side, then random-crop back to [N, C, H, W]
+    // With probability (1-p): pass through unchanged
+    if (input.shape.size() != 4) throw std::runtime_error("random_crop_with_padding requires 4D tensor [N,C,H,W]");
+    
+    int N = input.shape[0];
+    int C = input.shape[1];
+    int H = input.shape[2];
+    int W = input.shape[3];
+    int img_size = C * H * W;
+    
+    std::vector<float> out_data(N * C * H * W);
+    
+    static thread_local std::mt19937 gen(std::random_device{}());
+    std::uniform_int_distribution<int> dist_h(0, 2 * pad);
+    std::uniform_int_distribution<int> dist_w(0, 2 * pad);
+    std::uniform_real_distribution<float> coin(0.0f, 1.0f);
+    
+    for (int n = 0; n < N; ++n) {
+        int base = n * img_size;
+        
+        if (coin(gen) > p) {
+            // Pass through unchanged
+            std::copy(input.data.begin() + base, 
+                      input.data.begin() + base + img_size,
+                      out_data.begin() + base);
+            continue;
+        }
+        
+        // Random crop offset for this sample
+        int crop_y = dist_h(gen);
+        int crop_x = dist_w(gen);
+        
+        for (int c = 0; c < C; ++c) {
+            for (int h = 0; h < H; ++h) {
+                for (int w = 0; w < W; ++w) {
+                    // Map to original image coords
+                    int orig_h = crop_y + h - pad;
+                    int orig_w = crop_x + w - pad;
+                    
+                    int dst_idx = base + c * (H * W) + h * W + w;
+                    
+                    if (orig_h >= 0 && orig_h < H && orig_w >= 0 && orig_w < W) {
+                        int src_idx = base + c * (H * W) + orig_h * W + orig_w;
+                        out_data[dst_idx] = input.data[src_idx];
+                    } else {
+                        out_data[dst_idx] = 0.0f;  // Zero padding
+                    }
+                }
+            }
+        }
+    }
+    
+    return Tensor(input.shape, out_data);
+}
+
+} // namespace ops

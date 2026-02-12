@@ -15,6 +15,7 @@ PYBIND11_MODULE(my_backend, m) {
         .def("print", &Tensor::print)
         .def("add", &Tensor::add)
         .def("mul", &Tensor::mul)
+        .def("reshape", &Tensor::reshape)
         .def_readwrite("data", &Tensor::data)
         .def_readwrite("shape", &Tensor::shape)
         .def("__repr__", [](const Tensor &t) {
@@ -55,4 +56,21 @@ PYBIND11_MODULE(my_backend, m) {
     // Optimizers
     m_ops.def("sgd_step", &ops::sgd_step);
     m_ops.def("adam_step", &ops::adam_step);
+    m_ops.def("adam_step_wd", &ops::adam_step_wd);
+    
+    // Dropout
+    m_ops.def("dropout", &ops::dropout);
+    m_ops.def("dropout_backward", &ops::dropout_backward);
+    
+    // Data Augmentation
+    m_ops.def("random_horizontal_flip", &ops::random_horizontal_flip);
+    m_ops.def("random_crop_with_padding", &ops::random_crop_with_padding);
+    
+    // New Ops
+    m_ops.def("load_image", &ops::load_image);
+    m_ops.def("load_image_batch", &ops::load_image_batch);
+    m_ops.def("argmax", &ops::argmax);
+    m_ops.def("random_uniform", &ops::random_uniform);
+    m_ops.def("zeros", &ops::zeros);
+    m_ops.def("ones", &ops::ones);
 }

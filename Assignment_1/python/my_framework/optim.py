@@ -2,8 +2,10 @@ from .tensor import Tensor
 try:
     from . import my_backend as mb
 except ImportError:
-    import my_backend as mb
-import numpy as np
+    try:
+        import my_framework.my_backend as mb
+    except ImportError:
+        import my_backend as mb
 
 class Optimizer:
     def __init__(self, parameters, lr):
@@ -26,19 +28,15 @@ class SGD(Optimizer):
             if p.grad is not None:
                 if isinstance(p.grad, Tensor):
                     # Efficient C++ Update
-                    # p.data is the C++ Tensor object
-                    # p.grad.data is the C++ Tensor object (gradient)
                     mb.ops.sgd_step(p.data, p.grad.data, self.lr)
-                else:
-                    # Should not occur
-                    continue
 
 class Adam(Optimizer):
-    def __init__(self, parameters, lr=0.001, beta1=0.9, beta2=0.999, eps=1e-8):
+    def __init__(self, parameters, lr=0.001, beta1=0.9, beta2=0.999, eps=1e-8, weight_decay=0.0):
         super().__init__(parameters, lr)
         self.beta1 = beta1
         self.beta2 = beta2
         self.eps = eps
+        self.weight_decay = weight_decay
         self.t = 0
         
         # State: m and v for each parameter
@@ -47,27 +45,28 @@ class Adam(Optimizer):
         
         for p in self.parameters:
             # Initialize moments as zeros matching parameter shape
-            # Need to create zero tensor in C++.
-            # Helper: numpy zeros -> Tensor.
-            shape = p.shape # Tensor shape
+            # Using C++ zeros op
             
-            # Efficiently create zeros. Using p.data.shape from C++?
-            # tensor.py wrapper exposes shape.
-             
-            # Construct zeros using list/numpy. 
-            # In optim init, speed is less critical than per-step.
-            size = np.prod(shape)
-            zeros = mb.Tensor(shape, [0.0]*size)
+            # p.shape is a list. C++ expects std::vector<int>
+            zeros = mb.ops.zeros(p.shape)
             
-            self.m.append(zeros)
+            # Wrap in Tensor (which wraps the underlying C++ Tensor)
+            # Wait, mb.ops.zeros returns a C++ Tensor object.
+            # Our python Tensor class expects `data` to be C++ Tensor or list.
+            # So `Tensor(zeros)` works.
             
-            zeros_v = mb.Tensor(shape, [0.0]*size)
-            self.v.append(zeros_v)
+            self.m.append(Tensor(zeros))
+            self.v.append(Tensor(mb.ops.zeros(p.shape)))
             
     def step(self):
         self.t += 1
         for i, p in enumerate(self.parameters):
             if p.grad is not None:
-                # C++ Update
-                mb.ops.adam_step(p.data, p.grad.data, self.m[i], self.v[i], 
-                                 self.lr, self.beta1, self.beta2, self.eps, self.t)
+                if self.weight_decay > 0:
+                    # AdamW: decoupled weight decay
+                    mb.ops.adam_step_wd(p.data, p.grad.data, self.m[i].data, self.v[i].data, 
+                                       self.lr, self.beta1, self.beta2, self.eps, self.t, self.weight_decay)
+                else:
+                    # Standard Adam
+                    mb.ops.adam_step(p.data, p.grad.data, self.m[i].data, self.v[i].data, 
+                                    self.lr, self.beta1, self.beta2, self.eps, self.t)

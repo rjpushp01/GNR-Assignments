@@ -1,4 +1,3 @@
-import numpy as np
 import my_backend as mb
 
 class Tensor:
@@ -10,15 +9,22 @@ class Tensor:
         if isinstance(data, mb.Tensor):
             self.data = data
         else:
-            if isinstance(data, (np.ndarray, list)):
-                if isinstance(data, list):
-                    data = np.array(data, dtype=np.float32)
-                else:
-                    data = data.astype(np.float32)
-                
-                if shape is None:
-                    shape = list(data.shape)
-                self.data = mb.Tensor(shape, data.flatten().tolist())
+            if isinstance(data, list):
+                 # Flatten list if needed?
+                 # Assuming data is flat list or scalar for now
+                 if not data:
+                      self.data = mb.Tensor([0], [])
+                 else:
+                      # Check if list of numbers
+                      if shape is None:
+                           # Simple 1D inference
+                           shape = [len(data)]
+                      
+                      # Convert to flat float list
+                      # If nested, we need a recursive flatten. 
+                      # For assignment, let's assume flat data passed or use helper
+                      flat_data = self._flatten(data)
+                      self.data = mb.Tensor(shape, flat_data)
             elif isinstance(data, (float, int)):
                  self.data = mb.Tensor([1], [float(data)])
             else:
@@ -26,13 +32,24 @@ class Tensor:
                 
         self.shape = self.data.shape
 
+    def _flatten(self, l):
+        if not isinstance(l, list):
+            return [float(l)]
+        out = []
+        for x in l:
+            out.extend(self._flatten(x))
+        return out
+
     def __repr__(self):
-        # Using C++ print via capture might be hard, so just reconstruct numpy or use simple repr
         return f"Tensor({self.data.__repr__()}, requires_grad={self.requires_grad})"
 
-    def numpy(self):
-        # Copy data back to numpy (not efficient but okay for this assignment)
-        return np.array(self.data.data).reshape(self.shape)
+    def to_list(self):
+        # Convert C++ binding data (which exposes .data vector) to list
+        return self.data.data
+
+    def item(self):
+        # For scalar tensors
+        return self.data.data[0]
 
     def print(self):
         self.data.print()
@@ -43,8 +60,8 @@ class Tensor:
             return
         
         if grad is None:
-            # Assume scalar output
-            grad = Tensor(np.ones(self.shape), requires_grad=False)
+            # Scalar output, default to ones
+            grad = Tensor(mb.ops.ones(self.shape), requires_grad=False)
         
         self.grad = grad
         
@@ -65,8 +82,10 @@ class Tensor:
         for node in reversed(topo):
             if node._ctx:
                 grads = node._ctx.backward(node.grad)
+                # print(f"Node: {type(node._ctx).__name__}, Parents: {len(node._ctx.parents)}, Grads type: {type(grads)}")
                 if len(node._ctx.parents) == 1:
-                    grads = [grads]
+                    if not isinstance(grads, (list, tuple)):
+                        grads = [grads]
                 
                 for parent, parent_grad in zip(node._ctx.parents, grads):
                     if parent.requires_grad:
@@ -122,12 +141,28 @@ class Tensor:
              out._ctx = MaxPool2dBackward(self, res[1])
         return out
         
+    def reshape(self, shape):
+        # shape: list or tuple of ints
+        out_data = self.data.reshape(list(shape)) # returns new C++ Tensor
+        # Gradients? Reshape is differentiable (view). 
+        # C++ reshape returns new tensor sharing data (copy for now).
+        out = Tensor(out_data, requires_grad=self.requires_grad)
+        if out.requires_grad:
+             out._ctx = ReshapeBackward(self, self.shape)
+        return out
+
+    def dropout(self, p=0.5, training=True):
+        # C++ returns (output, mask)
+        res = mb.ops.dropout(self.data, p, training)
+        out = Tensor(res[0], requires_grad=self.requires_grad)
+        if out.requires_grad and training:
+             out._ctx = DropoutBackward(self, res[1])
+        return out
+        
 # --- Backward Functions (Autograd Nodes) ---
 
 class Function:
     def __init__(self, *parents):
-        # Only store parents that require grad to save memory? 
-        # No, simpler to store all to maintain graph structure logic for now.
         self.parents = parents
     
     def backward(self, grad_output):
@@ -144,9 +179,6 @@ class MulBackward(Function):
         self.y = y
         
     def backward(self, grad_output):
-        # Element-wise mul gradients
-        # dA = dC * B
-        # dB = dC * A
         grad_x = Tensor(grad_output.data.mul(self.y.data), requires_grad=False)
         grad_y = Tensor(grad_output.data.mul(self.x.data), requires_grad=False)
         return grad_x, grad_y
@@ -181,10 +213,19 @@ class Conv2dBackward(Function):
         self.padding = padding
         
     def backward(self, grad_output):
-        # Optimized backward using stored col_matrix
         grad_input = Tensor(mb.ops.conv2d_backward_input(grad_output.data, self.kernel.data, self.stride, self.padding, self.input.data), requires_grad=False)
         grad_kernel = Tensor(mb.ops.conv2d_backward_kernel(grad_output.data, self.input.data, self.col_matrix, self.stride, self.padding), requires_grad=False)
         return grad_input, grad_kernel
+        
+class ReshapeBackward(Function):
+     def __init__(self, x, old_shape):
+         super().__init__(x)
+         self.x = x
+         self.old_shape = old_shape
+     def backward(self, grad_output):
+         # Reshape grad back to old shape
+         grad = grad_output.reshape(self.old_shape)
+         return grad
         
 class MaxPool2dBackward(Function):
     def __init__(self, input, indices):
@@ -193,8 +234,14 @@ class MaxPool2dBackward(Function):
         self.indices = indices
         
     def backward(self, grad_output):
-        # Uses indices for efficient backward
         grad_input = Tensor(mb.ops.maxpool2d_backward(grad_output.data, self.input.data, self.indices), requires_grad=False)
         return grad_input
 
-
+class DropoutBackward(Function):
+    def __init__(self, input, mask):
+        super().__init__(input)
+        self.mask = mask  
+    
+    def backward(self, grad_output):
+        grad = Tensor(mb.ops.dropout_backward(grad_output.data, self.mask), requires_grad=False)
+        return grad

@@ -7,7 +7,7 @@ except ImportError:
     except ImportError:
         import my_backend as mb
 
-import numpy as np
+import math
 
 class Module:
     def __call__(self, *args, **kwargs):
@@ -44,10 +44,13 @@ class Module:
 
 class Linear(Module):
     def __init__(self, in_features, out_features):
-        # Xavier Initialization
-        limit = np.sqrt(6 / (in_features + out_features))
-        self.weight = Tensor(np.random.uniform(-limit, limit, (in_features, out_features)), requires_grad=True)
-        self.bias = Tensor(np.zeros(out_features), requires_grad=True) 
+        # He Kaiming Initialization (Better for ReLU)
+        # Uniform: U[-sqrt(6/fan_in), sqrt(6/fan_in)]
+        limit = math.sqrt(6 / in_features)
+        
+        # C++ Random Init
+        self.weight = Tensor(mb.ops.random_uniform([in_features, out_features], -limit, limit), requires_grad=True)
+        self.bias = Tensor(mb.ops.zeros([out_features]), requires_grad=True)  
         self.out_features = out_features
 
     def forward(self, x):
@@ -60,9 +63,13 @@ class Conv2d(Module):
         self.stride = stride
         self.padding = padding
         
-        # He Initialization
-        limit = np.sqrt(2 / (in_channels * kernel_size * kernel_size))
-        self.weight = Tensor(np.random.uniform(-limit, limit, (out_channels, in_channels, kernel_size, kernel_size)), requires_grad=True)
+        # Kaiming He Initialization for Uniform distribution
+        # U[-limit, limit] where limit = sqrt(6 / fan_in)
+        fan_in = in_channels * kernel_size * kernel_size
+        limit = math.sqrt(6.0 / fan_in)
+        
+        # Shape [Out, In, K, K]
+        self.weight = Tensor(mb.ops.random_uniform([out_channels, in_channels, kernel_size, kernel_size], -limit, limit), requires_grad=True)
         
     def forward(self, x):
         return x.conv2d(self.weight, self.stride, self.padding)
@@ -79,13 +86,7 @@ class MaxPool2d(Module):
     def forward(self, x):
         return x.maxpool2d(self.kernel_size, self.stride)
 
-class ReshapeBackward(Function):
-     def __init__(self, x, old_shape):
-         super().__init__(x)
-         self.x = x
-         self.old_shape = old_shape
-     def backward(self, grad_output):
-         return Tensor(grad_output.data.data, shape=self.old_shape, requires_grad=False)
+
 
 class Flatten(Module):
     def forward(self, x):
@@ -94,11 +95,15 @@ class Flatten(Module):
         for s in x.shape[1:]: size *= s
         
         new_shape = [N, size]
-        
-        out = Tensor(x.data.data, shape=new_shape, requires_grad=x.requires_grad)
-        if x.requires_grad:
-             out._ctx = ReshapeBackward(x, x.shape)
-        return out
+        return x.reshape(new_shape)
+
+class Dropout(Module):
+    def __init__(self, p=0.5):
+        self.p = p
+        self.training = True
+    
+    def forward(self, x):
+        return x.dropout(p=self.p, training=self.training)
 
 class CrossEntropyBackward(Function):
     def __init__(self, input, target):
@@ -120,15 +125,18 @@ class CrossEntropyLoss(Module):
 class MNIST_Model(Module):
     def __init__(self):
         # LeNet-ish
-        # Input: 1x28x28
-        self.conv1 = Conv2d(1, 6, 5) # -> 6x24x24
+        # Input: 1x28x28 (resize to 32x32?) assignment says "Convert to 32x32"
+        # My data loader now does resize to 32x32.
+        # So input is 1x32x32
+        
+        self.conv1 = Conv2d(1, 6, 5) # -> 6x28x28
         self.relu1 = ReLU()
-        self.pool1 = MaxPool2d(2, 2) # -> 6x12x12
-        self.conv2 = Conv2d(6, 16, 5) # -> 16x8x8
+        self.pool1 = MaxPool2d(2, 2) # -> 6x14x14
+        self.conv2 = Conv2d(6, 16, 5) # -> 16x10x10
         self.relu2 = ReLU()
-        self.pool2 = MaxPool2d(2, 2) # -> 16x4x4
+        self.pool2 = MaxPool2d(2, 2) # -> 16x5x5
         self.flatten = Flatten()
-        self.fc1 = Linear(16*4*4, 120)
+        self.fc1 = Linear(16*5*5, 120)
         self.relu3 = ReLU()
         self.fc2 = Linear(120, 84)
         self.relu4 = ReLU()
@@ -145,49 +153,39 @@ class MNIST_Model(Module):
 
 class CIFAR_Model(Module):
     def __init__(self):
-        # VGG-Style (Deeper) for CIFAR-100
+        # Mini-VGG for CIFAR-100 (2 conv blocks + FC dropout)
         # Input: 3x32x32
+        self.training = True
         
-        # Block 1
-        self.conv1 = Conv2d(3, 32, 3, padding=1)  # -> 32x32x32
+        # Block 1: 32 filters
+        self.conv1 = Conv2d(3, 32, 3, padding=1)   # -> 32x32x32
         self.relu1 = ReLU()
-        self.conv2 = Conv2d(32, 64, 3, padding=1) # -> 64x32x32
+        self.conv2 = Conv2d(32, 32, 3, padding=1)  # -> 32x32x32
         self.relu2 = ReLU()
-        self.pool1 = MaxPool2d(2, 2)              # -> 64x16x16
+        self.pool1 = MaxPool2d(2, 2)               # -> 32x16x16
         
-        # Block 2
-        self.conv3 = Conv2d(64, 128, 3, padding=1)# -> 128x16x16
+        # Block 2: 64 filters
+        self.conv3 = Conv2d(32, 64, 3, padding=1)  # -> 64x16x16
         self.relu3 = ReLU()
-        self.conv4 = Conv2d(128, 128, 3, padding=1) # -> 128x16x16
+        self.conv4 = Conv2d(64, 64, 3, padding=1)  # -> 64x16x16
         self.relu4 = ReLU()
-        self.pool2 = MaxPool2d(2, 2)               # -> 128x8x8
-        
-        # Block 3
-        self.conv5 = Conv2d(128, 256, 3, padding=1)# -> 256x8x8
-        self.relu5 = ReLU()
-        self.pool3 = MaxPool2d(2, 2)               # -> 256x4x4
+        self.pool2 = MaxPool2d(2, 2)               # -> 64x8x8
         
         self.flatten = Flatten()
         
         # Classifier
-        self.fc1 = Linear(256*4*4, 1024)
-        self.relu6 = ReLU()
-        self.fc2 = Linear(1024, 512)
-        self.relu7 = ReLU()
-        self.fc3 = Linear(512, 100) # CIFAR-100
+        self.fc1 = Linear(64*8*8, 256)
+        self.relu5 = ReLU()
+        self.drop1 = Dropout(0.3)
+        self.fc2 = Linear(256, 100)
         
     def forward(self, x):
         # Block 1
         x = self.pool1(self.relu2(self.conv2(self.relu1(self.conv1(x)))))
-        
         # Block 2
         x = self.pool2(self.relu4(self.conv4(self.relu3(self.conv3(x)))))
         
-        # Block 3
-        x = self.pool3(self.relu5(self.conv5(x)))
-        
         x = self.flatten(x)
-        x = self.relu6(self.fc1(x))
-        x = self.relu7(self.fc2(x))
-        x = self.fc3(x)
+        x = self.drop1(self.relu5(self.fc1(x)))
+        x = self.fc2(x)
         return x

@@ -45,5 +45,27 @@ Tensor cross_entropy_backward(const Tensor& input, const Tensor& target);
 // Optimizers
 void sgd_step(Tensor& param, const Tensor& grad, float lr);
 void adam_step(Tensor& param, const Tensor& grad, Tensor& m, Tensor& v, float lr, float beta1, float beta2, float eps, int t);
+void adam_step_wd(Tensor& param, const Tensor& grad, Tensor& m, Tensor& v, float lr, float beta1, float beta2, float eps, int t, float weight_decay);
+
+// Dropout: returns {output, mask}
+std::pair<Tensor, Tensor> dropout(const Tensor& input, float p, bool training);
+// Dropout backward: grad_output * mask
+Tensor dropout_backward(const Tensor& grad_output, const Tensor& mask);
+
+// Data Augmentation: Random horizontal flip for [N, C, H, W] tensors
+Tensor random_horizontal_flip(const Tensor& input, float p);
+// Data Augmentation: Pad image by `pad` pixels, random-crop back with probability `p` per image
+Tensor random_crop_with_padding(const Tensor& input, int pad, float p);
+
+// New Ops for removing Numpy
+Tensor load_image(const std::string& path);
+Tensor load_image_batch(const std::vector<std::string>& paths, int C, int H, int W); 
+
+// For accuracy: input [B, C]. Returns vector of ints
+std::vector<int> argmax(const Tensor& input, int axis);
+
+Tensor random_uniform(const std::vector<int>& shape, float min_val, float max_val);
+Tensor zeros(const std::vector<int>& shape);
+Tensor ones(const std::vector<int>& shape);
 
 }
