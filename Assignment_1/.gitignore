@@ -17,8 +17,9 @@ python/my_framework/*.pyd
 tests/*.so
 *.so
 
-# Output Directory
-results/
+# Data Directories
+data_1/
+data_2/
 
 # Temporary Data
 *.pkl
@@ -26,9 +27,6 @@ results/
 # Logs
 *.log
 *.csv
-
-# Plots
-*.png
 
 # Text files
 *.txt
