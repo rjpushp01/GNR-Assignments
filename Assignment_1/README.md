@@ -34,16 +34,16 @@ cmake --build build
 # 2. Train MNIST (fast, ~4 min)
 python train.py --dataset mnist --data_path data_1 --epochs 5 --lr 0.001
 
-# 3. Train CIFAR-100 with regularization (~1.5 hrs for 10 epochs)
+# 3. Train CIFAR-100 with regularization (~1.9 hrs for 10 epochs)
 python train.py --dataset cifar --data_path data_2 --epochs 10 --lr 0.001 --weight_decay 1e-4
 
 # 4. Evaluate
-python test.py --dataset mnist --data_path data_1 --model_path results/mnist_model.pkl
-python test.py --dataset cifar --data_path data_2 --model_path results/cifar_model.pkl
+python test.py --dataset mnist --data_path data_1 --model_path results/models/mnist_model.pkl
+python test.py --dataset cifar --data_path data_2 --model_path results/models/cifar_model.pkl
 
 # 5. Generate plots
-python plot_metrics.py --log_file results/training_log_mnist.csv
-python plot_metrics.py --log_file results/training_log_cifar.csv
+python plot_metrics.py --log_file results/training_logs/training_log_mnist.csv
+python plot_metrics.py --log_file results/training_logs/training_log_cifar.csv
 ```
 
 All results (model weights, logs, plots) will be in the `results/` directory.
@@ -84,19 +84,30 @@ Assignment_1/
 │   ├── test_forward.py
 │   └── test_autograd.py
 │
-├── results/                    # All outputs are saved here
-│   ├── training_log_*.csv      # Per-epoch metrics
-│   ├── model_summary_*.txt     # Architecture summary
-│   ├── *_model.pkl             # Saved model weights
-│   ├── test_results.txt        # Test evaluation results
-│   ├── combined_dashboard_*.png # Full training dashboard (6 panels)
-│   ├── loss_curve_*.png        # Train vs val loss
-│   ├── accuracy_curve_*.png    # Train vs val accuracy
-│   ├── overfitting_gap_*.png   # Generalization gap analysis
-│   ├── lr_schedule_*.png       # Learning rate over epochs
-│   ├── memory_usage_*.png      # Peak RSS memory per epoch
-│   ├── epoch_time_*.png        # Time per epoch + batch time
-│   └── cumulative_time_*.png   # Total wall-clock time
+├── results/                    # All outputs (organized by category)
+│   ├── models/                 # Saved model weights
+│   │   ├── mnist_model.pkl
+│   │   └── cifar_model.pkl
+│   │
+│   ├── training_logs/          # Per-epoch training metrics & model summaries
+│   │   ├── training_log_mnist.csv
+│   │   ├── training_log_cifar.csv
+│   │   ├── model_summary_mnist.txt
+│   │   └── model_summary_cifar.txt
+│   │
+│   ├── test_results/           # Evaluation results (overwritten each run)
+│   │   ├── mnist_test_results.txt
+│   │   └── cifar_test_results.txt
+│   │
+│   └── plots/                  # Training visualization plots
+│       ├── combined_dashboard_*.png  # Full training dashboard (6 panels)
+│       ├── loss_curve_*.png          # Train vs val loss
+│       ├── accuracy_curve_*.png      # Train vs val accuracy
+│       ├── overfitting_gap_*.png     # Generalization gap analysis
+│       ├── lr_schedule_*.png         # Learning rate over epochs
+│       ├── memory_usage_*.png        # Peak RSS memory per epoch
+│       ├── epoch_time_*.png          # Time per epoch + batch time
+│       └── cumulative_time_*.png     # Total wall-clock time
 │
 ├── data_1/                     # MNIST-like dataset (user-provided)
 │   ├── class_0/
@@ -198,11 +209,11 @@ python train.py --dataset cifar --data_path data_2 --epochs 20 --batch_size 64 \
 
 ### What gets saved
 
-| File                                    | Description                                    |
-|-----------------------------------------|------------------------------------------------|
-| `results/training_log_<dataset>.csv`    | CSV with per-epoch metrics (11 columns)        |
-| `results/<dataset>_model.pkl`           | Saved model weights (pickle)                   |
-| `results/model_summary_<dataset>.txt`   | Model summary table with params/MACs/FLOPs     |
+| File                                              | Description                                    |
+|---------------------------------------------------|------------------------------------------------|
+| `results/training_logs/training_log_<dataset>.csv` | CSV with per-epoch metrics (11 columns)        |
+| `results/models/<dataset>_model.pkl`               | Saved model weights (pickle)                   |
+| `results/training_logs/model_summary_<dataset>.txt`| Model summary table with params/MACs/FLOPs     |
 
 ### Dataset format
 
@@ -248,10 +259,10 @@ python test.py --dataset <DATASET> --data_path <DATA_PATH> \
 
 ```bash
 # Evaluate MNIST model
-python test.py --dataset mnist --data_path data_1 --model_path results/mnist_model.pkl
+python test.py --dataset mnist --data_path data_1 --model_path results/models/mnist_model.pkl
 
 # Evaluate CIFAR model
-python test.py --dataset cifar --data_path data_2 --model_path results/cifar_model.pkl
+python test.py --dataset cifar --data_path data_2 --model_path results/models/cifar_model.pkl
 ```
 
 ### What gets printed and saved
@@ -260,7 +271,7 @@ python test.py --dataset cifar --data_path data_2 --model_path results/cifar_mod
 - **Dataset loading time**
 - **Test accuracy**
 - **Evaluation time**
-- Results are appended to `results/test_results.txt`
+- Results are saved to `results/test_results/<dataset>_test_results.txt` (overwritten each run)
 
 ---
 
@@ -274,32 +285,32 @@ python plot_metrics.py --log_file <LOG_FILE>
 
 ### Parameters
 
-| Parameter     | Required | Default                              | Description                          |
-|---------------|----------|--------------------------------------|--------------------------------------|
-| `--log_file`  | No       | `results/training_log_mnist.csv`     | Path to the training log CSV file.   |
+| Parameter     | Required | Default                                           | Description                          |
+|---------------|----------|---------------------------------------------------|--------------------------------------|
+| `--log_file`  | No       | `results/training_logs/training_log_mnist.csv`     | Path to the training log CSV file.   |
 
 ### Examples
 
 ```bash
 # Plot MNIST training metrics
-python plot_metrics.py --log_file results/training_log_mnist.csv
+python plot_metrics.py --log_file results/training_logs/training_log_mnist.csv
 
 # Plot CIFAR training metrics
-python plot_metrics.py --log_file results/training_log_cifar.csv
+python plot_metrics.py --log_file results/training_logs/training_log_cifar.csv
 ```
 
 ### Generated plots (8 per dataset)
 
-| Plot file                                      | Description                                    |
-|------------------------------------------------|------------------------------------------------|
-| `results/loss_curve_*.png`                     | Train vs. validation loss per epoch            |
-| `results/accuracy_curve_*.png`                 | Train vs. validation accuracy per epoch        |
-| `results/overfitting_gap_*.png`                | Generalization gap (train − val accuracy)      |
-| `results/lr_schedule_*.png`                    | Learning rate schedule across epochs           |
-| `results/memory_usage_*.png`                   | Peak RSS memory usage per epoch                |
-| `results/epoch_time_*.png`                     | Time per epoch (bars) + avg batch time (line)  |
-| `results/cumulative_time_*.png`                | Cumulative wall-clock training time            |
-| `results/combined_dashboard_*.png`             | 3×2 combined dashboard with all metrics        |
+| Plot file                                            | Description                                    |
+|------------------------------------------------------|------------------------------------------------|
+| `results/plots/loss_curve_*.png`                     | Train vs. validation loss per epoch            |
+| `results/plots/accuracy_curve_*.png`                 | Train vs. validation accuracy per epoch        |
+| `results/plots/overfitting_gap_*.png`                | Generalization gap (train − val accuracy)      |
+| `results/plots/lr_schedule_*.png`                    | Learning rate schedule across epochs           |
+| `results/plots/memory_usage_*.png`                   | Peak RSS memory usage per epoch                |
+| `results/plots/epoch_time_*.png`                     | Time per epoch (bars) + avg batch time (line)  |
+| `results/plots/cumulative_time_*.png`                | Cumulative wall-clock training time            |
+| `results/plots/combined_dashboard_*.png`             | 3×2 combined dashboard with all metrics        |
 
 ---
 
@@ -315,14 +326,32 @@ This runs the framework correctness tests in `tests/test_forward.py` and `tests/
 
 ## Output Files & Where to Find Them
 
-All outputs are saved to the `results/` directory:
+All outputs are organized under the `results/` directory in categorized subdirectories:
+
+### `results/models/` — Saved Model Weights
+
+| File                                 | Created By      | Description                                    |
+|--------------------------------------|-----------------|------------------------------------------------|
+| `<dataset>_model.pkl`                | `train.py`      | Saved model weights (pickle)                   |
+
+### `results/training_logs/` — Training Metrics & Summaries
 
 | File                                 | Created By      | Description                                    |
 |--------------------------------------|-----------------|------------------------------------------------|
 | `training_log_<dataset>.csv`         | `train.py`      | Per-epoch training and validation metrics      |
 | `model_summary_<dataset>.txt`        | `train.py`      | Model architecture table with params/FLOPs     |
-| `<dataset>_model.pkl`                | `train.py`      | Saved model weights                            |
-| `test_results.txt`                   | `test.py`       | Evaluation results (appended each run)         |
+
+### `results/test_results/` — Evaluation Results
+
+| File                                 | Created By      | Description                                    |
+|--------------------------------------|-----------------|------------------------------------------------|
+| `mnist_test_results.txt`             | `test.py`       | MNIST evaluation results (overwritten each run)|
+| `cifar_test_results.txt`             | `test.py`       | CIFAR evaluation results (overwritten each run)|
+
+### `results/plots/` — Training Visualization Plots
+
+| File                                 | Created By      | Description                                    |
+|--------------------------------------|-----------------|------------------------------------------------|
 | `loss_curve_*.png`                   | `plot_metrics`  | Loss curve plot                                |
 | `accuracy_curve_*.png`               | `plot_metrics`  | Accuracy curve plot                            |
 | `overfitting_gap_*.png`              | `plot_metrics`  | Generalization gap bar chart                   |
@@ -354,30 +383,33 @@ All outputs are saved to the `results/` directory:
 | fc3       | Linear   | [B, 10]          | 850        |
 | **Total** |          |                  | **61,706** |
 
-### CIFAR Model (Mini-VGG with Regularization)
+### CIFAR Model (Mini-VGG with Global Average Pooling)
 
 | Layer     | Type       | Output Shape     | Parameters |
 |-----------|------------|------------------|------------|
-| conv1     | Conv2d     | [B, 32, 32, 32] | 896        |
+| conv1     | Conv2d     | [B, 32, 32, 32] | 864        |
 | relu1     | ReLU       | [B, 32, 32, 32] | 0          |
-| conv2     | Conv2d     | [B, 32, 32, 32] | 9,248      |
+| conv2     | Conv2d     | [B, 32, 32, 32] | 9,216      |
 | relu2     | ReLU       | [B, 32, 32, 32] | 0          |
 | pool1     | MaxPool2d  | [B, 32, 16, 16] | 0          |
-| **drop1** | **Dropout(0.25)** | [B, 32, 16, 16] | **0** |
-| conv3     | Conv2d     | [B, 64, 16, 16] | 18,496     |
+| conv3     | Conv2d     | [B, 64, 16, 16] | 18,432     |
 | relu3     | ReLU       | [B, 64, 16, 16] | 0          |
-| conv4     | Conv2d     | [B, 64, 16, 16] | 36,928     |
+| conv4     | Conv2d     | [B, 64, 16, 16] | 36,864     |
 | relu4     | ReLU       | [B, 64, 16, 16] | 0          |
 | pool2     | MaxPool2d  | [B, 64, 8, 8]   | 0          |
-| **drop2** | **Dropout(0.25)** | [B, 64, 8, 8] | **0**  |
-| flatten   | Flatten    | [B, 4096]        | 0          |
-| fc1       | Linear     | [B, 256]         | 1,048,832  |
-| relu5     | ReLU       | [B, 256]         | 0          |
-| **drop3** | **Dropout(0.5)** | [B, 256]    | **0**      |
+| conv5     | Conv2d     | [B, 128, 8, 8]  | 73,728     |
+| relu5     | ReLU       | [B, 128, 8, 8]  | 0          |
+| conv6     | Conv2d     | [B, 128, 8, 8]  | 147,456    |
+| relu6     | ReLU       | [B, 128, 8, 8]  | 0          |
+| pool3     | MaxPool2d  | [B, 128, 4, 4]  | 0          |
+| **gap**   | **GlobalAvgPool2d** | **[B, 128]** | **0** |
+| fc1       | Linear     | [B, 256]         | 33,024     |
+| relu7     | ReLU       | [B, 256]         | 0          |
+| **drop1** | **Dropout(0.3)** | [B, 256]    | **0**      |
 | fc2       | Linear     | [B, 100]         | 25,700     |
-| **Total** |            |                  | **~1.14M** |
+| **Total** |            |                  | **345,284**|
 
-> **Bold** rows indicate regularization layers added to combat overfitting. Dropout layers have zero trainable parameters but are crucial for generalization.
+> **Global Average Pooling** replaces the traditional Flatten layer, reducing the input to the classifier from 2,048 dimensions (128×4×4) to 128 dimensions. This eliminates the massive FC bottleneck, reducing total parameters from 1.14M to 345K while maintaining accuracy.
 
 ---
 
@@ -391,9 +423,7 @@ Randomly zeroes elements of the input tensor during training with a given probab
 
 | Location                | Dropout Rate | Purpose                                    |
 |-------------------------|--------------|--------------------------------------------|
-| After conv block 1      | 25%          | Prevent co-adaptation of conv features     |
-| After conv block 2      | 25%          | Prevent co-adaptation of conv features     |
-| After FC1 (256 units)   | 50%          | Strong regularization in high-param layer  |
+| After FC1 (256 units)   | 30%          | Prevent co-adaptation of FC features       |
 
 - **Implementation**: Custom C++ op (`dropout`, `dropout_backward`) with inverted dropout scaling (output × `1/(1-p)` during training so no scaling needed at test time).
 - **Train/Eval mode**: `model.train()` enables dropout; `model.eval()` disables it (pass-through).
@@ -434,24 +464,22 @@ python train.py --dataset cifar --data_path data_2 --weight_decay 1e-4
 
 #### MNIST Training Dashboard
 
-![MNIST Training Dashboard](results/combined_dashboard_training_log_mnist.png)
+![MNIST Training Dashboard](results/plots/combined_dashboard_training_log_mnist.png)
 
-### CIFAR-100 (10 epochs, lr=0.001, no weight decay — baseline)
+### CIFAR-100 (10 epochs, lr=0.001, weight_decay=1e-4)
 
 | Metric              | Value    |
 |---------------------|----------|
-| Best Val Accuracy   | 35.91%   |
-| Final Train Acc     | 86.31%   |
-| Final Val Acc       | 33.33%   |
-| Generalization Gap  | 53.0%    |
-| Total Training Time | 97.1 min |
-| Peak Memory (RSS)   | 2,614 MB |
+| Best Val Accuracy   | 40.34%   |
+| Final Train Acc     | 41.08%   |
+| Final Val Acc       | 40.34%   |
+| Generalization Gap  | 0.74%    |
+| Total Training Time | 114.5 min|
+| Peak Memory (RSS)   | 1,094 MB |
 
 #### CIFAR-100 Training Dashboard
 
-![CIFAR-100 Training Dashboard](results/combined_dashboard_training_log_cifar.png)
-
-> **Note**: The CIFAR-100 results above are from an earlier training run **without** regularization (no Dropout, no augmentation, no weight decay). The newly added regularization layers (Dropout, random horizontal flip, AdamW weight decay) are expected to significantly reduce the generalization gap when re-trained.
+![CIFAR-100 Training Dashboard](results/plots/combined_dashboard_training_log_cifar.png)
 
 ### Individual Plots
 
@@ -460,19 +488,19 @@ python train.py --dataset cifar --data_path data_2 --weight_decay 1e-4
 
 | Loss Curve | Accuracy Curve |
 |:---:|:---:|
-| ![](results/loss_curve_training_log_mnist.png) | ![](results/accuracy_curve_training_log_mnist.png) |
+| ![](results/plots/loss_curve_training_log_mnist.png) | ![](results/plots/accuracy_curve_training_log_mnist.png) |
 
 | Overfitting Gap | Learning Rate |
 |:---:|:---:|
-| ![](results/overfitting_gap_training_log_mnist.png) | ![](results/lr_schedule_training_log_mnist.png) |
+| ![](results/plots/overfitting_gap_training_log_mnist.png) | ![](results/plots/lr_schedule_training_log_mnist.png) |
 
 | Epoch Time | Memory Usage |
 |:---:|:---:|
-| ![](results/epoch_time_training_log_mnist.png) | ![](results/memory_usage_training_log_mnist.png) |
+| ![](results/plots/epoch_time_training_log_mnist.png) | ![](results/plots/memory_usage_training_log_mnist.png) |
 
 | Cumulative Time |
 |:---:|
-| ![](results/cumulative_time_training_log_mnist.png) |
+| ![](results/plots/cumulative_time_training_log_mnist.png) |
 
 </details>
 
@@ -481,19 +509,19 @@ python train.py --dataset cifar --data_path data_2 --weight_decay 1e-4
 
 | Loss Curve | Accuracy Curve |
 |:---:|:---:|
-| ![](results/loss_curve_training_log_cifar.png) | ![](results/accuracy_curve_training_log_cifar.png) |
+| ![](results/plots/loss_curve_training_log_cifar.png) | ![](results/plots/accuracy_curve_training_log_cifar.png) |
 
 | Overfitting Gap | Learning Rate |
 |:---:|:---:|
-| ![](results/overfitting_gap_training_log_cifar.png) | ![](results/lr_schedule_training_log_cifar.png) |
+| ![](results/plots/overfitting_gap_training_log_cifar.png) | ![](results/plots/lr_schedule_training_log_cifar.png) |
 
 | Epoch Time | Memory Usage |
 |:---:|:---:|
-| ![](results/epoch_time_training_log_cifar.png) | ![](results/memory_usage_training_log_cifar.png) |
+| ![](results/plots/epoch_time_training_log_cifar.png) | ![](results/plots/memory_usage_training_log_cifar.png) |
 
 | Cumulative Time |
 |:---:|
-| ![](results/cumulative_time_training_log_cifar.png) |
+| ![](results/plots/cumulative_time_training_log_cifar.png) |
 
 </details>
 
@@ -503,23 +531,23 @@ python train.py --dataset cifar --data_path data_2 --weight_decay 1e-4
 
 During training and evaluation, the following metrics are computed and reported:
 
-| Metric                         | Printed | Saved to File         |
-|--------------------------------|---------|-----------------------|
-| Model architecture summary     | ✅      | `model_summary_*.txt` |
-| Total trainable parameters     | ✅      | `model_summary_*.txt` |
-| MACs per forward pass          | ✅      | `model_summary_*.txt` |
-| FLOPs per forward pass         | ✅      | `model_summary_*.txt` |
-| Dataset loading time (seconds) | ✅      | Console output        |
-| Training loss per epoch        | ✅      | `training_log_*.csv`  |
-| Training accuracy per epoch    | ✅      | `training_log_*.csv`  |
-| Validation loss per epoch      | ✅      | `training_log_*.csv`  |
-| Validation accuracy per epoch  | ✅      | `training_log_*.csv`  |
-| Epoch time (seconds)           | ✅      | `training_log_*.csv`  |
-| Cumulative training time       | ✅      | `training_log_*.csv`  |
-| Average batch time             | ✅      | `training_log_*.csv`  |
-| Memory usage (RSS MB)          | ✅      | `training_log_*.csv`  |
-| Learning rate per epoch        | ✅      | `training_log_*.csv`  |
-| Generalization gap             | ✅      | Plots (computed)      |
-| Test accuracy                  | ✅      | `test_results.txt`    |
-| Evaluation time                | ✅      | `test_results.txt`    |
+| Metric                         | Printed | Saved to File                              |
+|--------------------------------|---------|--------------------------------------------|
+| Model architecture summary     | ✅      | `training_logs/model_summary_*.txt`        |
+| Total trainable parameters     | ✅      | `training_logs/model_summary_*.txt`        |
+| MACs per forward pass          | ✅      | `training_logs/model_summary_*.txt`        |
+| FLOPs per forward pass         | ✅      | `training_logs/model_summary_*.txt`        |
+| Dataset loading time (seconds) | ✅      | Console output                             |
+| Training loss per epoch        | ✅      | `training_logs/training_log_*.csv`         |
+| Training accuracy per epoch    | ✅      | `training_logs/training_log_*.csv`         |
+| Validation loss per epoch      | ✅      | `training_logs/training_log_*.csv`         |
+| Validation accuracy per epoch  | ✅      | `training_logs/training_log_*.csv`         |
+| Epoch time (seconds)           | ✅      | `training_logs/training_log_*.csv`         |
+| Cumulative training time       | ✅      | `training_logs/training_log_*.csv`         |
+| Average batch time             | ✅      | `training_logs/training_log_*.csv`         |
+| Memory usage (RSS MB)          | ✅      | `training_logs/training_log_*.csv`         |
+| Learning rate per epoch        | ✅      | `training_logs/training_log_*.csv`         |
+| Generalization gap             | ✅      | `plots/` (computed)                        |
+| Test accuracy                  | ✅      | `test_results/<dataset>_test_results.txt`  |
+| Evaluation time                | ✅      | `test_results/<dataset>_test_results.txt`  |
 

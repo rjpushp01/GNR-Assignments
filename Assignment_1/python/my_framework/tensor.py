@@ -158,6 +158,14 @@ class Tensor:
         if out.requires_grad and training:
              out._ctx = DropoutBackward(self, res[1])
         return out
+
+    def global_avg_pool2d(self):
+        # C++ returns [N, C] from [N, C, H, W]
+        out_data = mb.ops.global_avg_pool2d(self.data)
+        out = Tensor(out_data, requires_grad=self.requires_grad)
+        if out.requires_grad:
+             out._ctx = GlobalAvgPool2dBackward(self)
+        return out
         
 # --- Backward Functions (Autograd Nodes) ---
 
@@ -244,4 +252,15 @@ class DropoutBackward(Function):
     
     def backward(self, grad_output):
         grad = Tensor(mb.ops.dropout_backward(grad_output.data, self.mask), requires_grad=False)
+        return grad
+
+class GlobalAvgPool2dBackward(Function):
+    def __init__(self, input):
+        super().__init__(input)
+        self.input_shape = input.shape  # [N, C, H, W]
+    
+    def backward(self, grad_output):
+        H = self.input_shape[2]
+        W = self.input_shape[3]
+        grad = Tensor(mb.ops.global_avg_pool2d_backward(grad_output.data, H, W), requires_grad=False)
         return grad

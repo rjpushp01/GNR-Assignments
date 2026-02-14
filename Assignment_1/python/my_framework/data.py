@@ -22,7 +22,7 @@ class DataLoader:
         self.shuffle = shuffle
         self.flatten = flatten
         self.mode = mode
-        self.augment = augment and (mode == 'train')  # Only augment during training
+        self.augment = augment and (mode == 'train')
         
         print(f"Loading data from {root_dir}, found {len(self.classes)} classes. Mode: {mode}")
         
@@ -31,15 +31,11 @@ class DataLoader:
 
         for cls in self.classes:
             cls_path = os.path.join(root_dir, cls)
-            # Portable glob
             img_paths = sorted(glob.glob(os.path.join(cls_path, "*.png")) + glob.glob(os.path.join(cls_path, "*.jpg")))
             
-            # Deterministic shuffle
-            # Use random with seed
             rng = random.Random(seed)
             rng.shuffle(img_paths)
             
-            # Split 70:20:10
             n = len(img_paths)
             n_train = int(0.7 * n)
             n_val = int(0.2 * n)
@@ -80,26 +76,20 @@ class DataLoader:
                 H, W = 32, 32
                 C = 1
             else:
-                # CIFAR
                 H, W = 32, 32
                 C = 3
             
-            # C++ Load Batch
-            # Returns Tensor [B, C, H, W]
             raw_tensor = mb.ops.load_image_batch(batch_files, C, H, W)
             
             # Apply augmentation during training
             if self.augment:
-                # Random crop with 4px padding (80% probability per image)
-                # Pads to 40x40, then randomly crops back to 32x32
-                raw_tensor = mb.ops.random_crop_with_padding(raw_tensor, 4, 0.8)
-                # Random horizontal flip (50% chance per image)
-                raw_tensor = mb.ops.random_horizontal_flip(raw_tensor, 0.5)
+                raw_tensor = mb.ops.random_crop_with_padding(raw_tensor, 4, 0.6)
+                raw_tensor = mb.ops.random_horizontal_flip(raw_tensor, 0.35)
             
             images_tensor = Tensor(raw_tensor)
             
             # Labels Tensor
-            labels_tensor = Tensor(batch_labels) # 1D list -> Tensor
+            labels_tensor = Tensor(batch_labels)
             
             if self.flatten:
                 pass

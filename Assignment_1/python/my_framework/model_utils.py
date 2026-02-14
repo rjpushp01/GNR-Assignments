@@ -6,7 +6,7 @@ Part of the custom deep learning framework for GNR 638 Assignment 1.
 import sys
 
 # ---- Layer-type imports ----
-from .models import Module, Conv2d, Linear, ReLU, MaxPool2d, Flatten
+from .models import Module, Conv2d, Linear, ReLU, MaxPool2d, Flatten, GlobalAvgPool2d
 
 
 def count_parameters(model):
@@ -118,6 +118,13 @@ def compute_layer_stats(model, input_shape):
             w = 0
             layer_type = "Flatten"
             out_shape = f"[B, {flat_size}]"
+
+        elif isinstance(layer, GlobalAvgPool2d):
+            # [B, C, H, W] -> [B, C]
+            layer_type = "GlobalAvgPool2d"
+            out_shape = f"[B, {c}]"
+            h = 0
+            w = 0
 
         else:
             layer_type = type(layer).__name__

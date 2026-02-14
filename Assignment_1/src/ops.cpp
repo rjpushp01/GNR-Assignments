@@ -9,13 +9,13 @@
 
 namespace ops {
 
-// Utility: Im2Col (Same as before)
+
 void im2col(const std::vector<float>& input_data, std::vector<float>& col_data,
             int N, int C, int H, int W, int KH, int KW, int stride, int padding,
             int H_out, int W_out) {
             
     int col_width = C * KH * KW; 
-    // #pragma omp parallel for 
+ 
     for (int n = 0; n < N; ++n) {
         for (int h_out = 0; h_out < H_out; ++h_out) {
             for (int w_out = 0; w_out < W_out; ++w_out) {
@@ -43,7 +43,7 @@ void im2col(const std::vector<float>& input_data, std::vector<float>& col_data,
     }
 }
 
-// Utility: Col2Im (Same as before)
+
 void col2im(const std::vector<float>& col_data, std::vector<float>& input_diff,
             int N, int C, int H, int W, int KH, int KW, int stride, int padding,
             int H_out, int W_out) {
@@ -65,9 +65,7 @@ void col2im(const std::vector<float>& col_data, std::vector<float>& input_diff,
                             int w_in = w_out * stride - padding + kw;
                             
                             if (h_in >= 0 && h_in < H && w_in >= 0 && w_in < W) {
-                                float val = col_data[col_row_idx * col_width + col_idx]; // Read col
-                                // Add to input implementation (atomic add if parallel?)
-                                // For now serial
+                                float val = col_data[col_row_idx * col_width + col_idx];
                                 input_diff[n*(C*input_hw) + c*input_hw + h_in*W + w_in] += val;
                             }
                             col_idx++;
@@ -343,9 +341,56 @@ void adam_step_wd(Tensor& param, const Tensor& grad, Tensor& m, Tensor& v, float
     }
 }
 
-// ===================================
-//  Dropout
-// ===================================
+
+Tensor global_avg_pool2d(const Tensor& input) {
+    // input: [N, C, H, W] -> output: [N, C]
+    if (input.shape.size() != 4) throw std::runtime_error("global_avg_pool2d requires 4D tensor [N,C,H,W]");
+    
+    int N = input.shape[0];
+    int C = input.shape[1];
+    int H = input.shape[2];
+    int W = input.shape[3];
+    int spatial = H * W;
+    
+    std::vector<float> out_data(N * C, 0.0f);
+    
+    for (int n = 0; n < N; ++n) {
+        for (int c = 0; c < C; ++c) {
+            float sum = 0.0f;
+            int base = n * (C * H * W) + c * (H * W);
+            for (int i = 0; i < spatial; ++i) {
+                sum += input.data[base + i];
+            }
+            out_data[n * C + c] = sum / spatial;
+        }
+    }
+    
+    return Tensor({N, C}, out_data);
+}
+
+Tensor global_avg_pool2d_backward(const Tensor& grad_output, int H, int W) {
+    // grad_output: [N, C] -> grad_input: [N, C, H, W]
+    int N = grad_output.shape[0];
+    int C = grad_output.shape[1];
+    int spatial = H * W;
+    float scale = 1.0f / spatial;
+    
+    std::vector<float> grad_data(N * C * H * W);
+    
+    for (int n = 0; n < N; ++n) {
+        for (int c = 0; c < C; ++c) {
+            float val = grad_output.data[n * C + c] * scale;
+            int base = n * (C * H * W) + c * (H * W);
+            for (int i = 0; i < spatial; ++i) {
+                grad_data[base + i] = val;
+            }
+        }
+    }
+    
+    return Tensor({N, C, H, W}, grad_data);
+}
+
+
 std::pair<Tensor, Tensor> dropout(const Tensor& input, float p, bool training) {
     if (!training || p <= 0.0f) {
         // No dropout during eval or if p=0
@@ -383,9 +428,7 @@ Tensor dropout_backward(const Tensor& grad_output, const Tensor& mask) {
     return Tensor(grad_output.shape, grad_data);
 }
 
-// ===================================
-//  Data Augmentation: Random Horizontal Flip
-// ===================================
+
 Tensor random_horizontal_flip(const Tensor& input, float p) {
     // input: [N, C, H, W]
     if (input.shape.size() != 4) throw std::runtime_error("random_horizontal_flip requires 4D tensor [N,C,H,W]");
@@ -418,9 +461,7 @@ Tensor random_horizontal_flip(const Tensor& input, float p) {
     return Tensor(input.shape, out_data);
 }
 
-// ===================================
-//  New Operations for NumPy-Free Backend
-// ===================================
+
 
 Tensor load_image(const std::string& path) {
     // Read using OpenCV C++

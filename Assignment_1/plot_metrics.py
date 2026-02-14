@@ -3,15 +3,15 @@ Generate comprehensive training metric plots from the CSV logs produced by train
 Produces individual high-quality plots and a combined dashboard for documentation.
 
 Usage:
-    python plot_metrics.py --log_file results/training_log_mnist.csv
-    python plot_metrics.py --log_file results/training_log_cifar.csv
+    python plot_metrics.py --log_file results/training_logs/training_log_mnist.csv
+    python plot_metrics.py --log_file results/training_logs/training_log_cifar.csv
 """
 import csv
 import argparse
 import os
 import math
 
-# ── Minimal plotting with matplotlib only ──
+
 import matplotlib
 matplotlib.use('Agg')  # Non-interactive backend
 import matplotlib.pyplot as plt
@@ -19,7 +19,7 @@ import matplotlib.ticker as ticker
 from matplotlib.gridspec import GridSpec
 
 
-# ── Color Palette (Material-inspired) ──
+
 COLORS = {
     'train_loss':  '#1565C0',   # Blue 800
     'val_loss':    '#C62828',   # Red 800
@@ -79,8 +79,7 @@ def plot_metrics(log_file):
         print("Error: log file is empty.")
         return
 
-    if not os.path.exists("results"):
-        os.makedirs("results")
+    os.makedirs("results/plots", exist_ok=True)
 
     base_name = os.path.splitext(os.path.basename(log_file))[0]
     
@@ -112,9 +111,7 @@ def plot_metrics(log_file):
 
     saved_files = []
 
-    # ================================================================
-    #  1.  LOSS CURVE
-    # ================================================================
+
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.plot(epochs, train_loss, 'o-', label='Train Loss', color=COLORS['train_loss'], linewidth=2.5, markersize=6)
     ax.plot(epochs, val_loss, 's-', label='Val Loss', color=COLORS['val_loss'], linewidth=2.5, markersize=6)
@@ -124,15 +121,13 @@ def plot_metrics(log_file):
     if num_epochs > 1:
         ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     fig.tight_layout()
-    path = f"results/loss_curve_{base_name}.png"
+    path = f"results/plots/loss_curve_{base_name}.png"
     fig.savefig(path, dpi=150, bbox_inches='tight')
     plt.close(fig)
     saved_files.append(path)
     print(f"  ✓ {path}")
 
-    # ================================================================
-    #  2.  ACCURACY CURVE
-    # ================================================================
+
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.plot(epochs, [a * 100 for a in train_acc], 'o-', label='Train Acc', color=COLORS['train_acc'], linewidth=2.5, markersize=6)
     ax.plot(epochs, [a * 100 for a in val_acc], 's-', label='Val Acc', color=COLORS['val_acc'], linewidth=2.5, markersize=6)
@@ -143,15 +138,13 @@ def plot_metrics(log_file):
     if num_epochs > 1:
         ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     fig.tight_layout()
-    path = f"results/accuracy_curve_{base_name}.png"
+    path = f"results/plots/accuracy_curve_{base_name}.png"
     fig.savefig(path, dpi=150, bbox_inches='tight')
     plt.close(fig)
     saved_files.append(path)
     print(f"  ✓ {path}")
 
-    # ================================================================
-    #  3.  OVERFITTING GAP (Train Acc - Val Acc)
-    # ================================================================
+
     gap = [(ta - va) * 100 for ta, va in zip(train_acc, val_acc)]
     fig, ax = plt.subplots(figsize=(10, 6))
     bar_colors = [COLORS['gap'] if g > 10 else '#66BB6A' for g in gap]
@@ -163,15 +156,13 @@ def plot_metrics(log_file):
     if num_epochs > 1:
         ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     fig.tight_layout()
-    path = f"results/overfitting_gap_{base_name}.png"
+    path = f"results/plots/overfitting_gap_{base_name}.png"
     fig.savefig(path, dpi=150, bbox_inches='tight')
     plt.close(fig)
     saved_files.append(path)
     print(f"  ✓ {path}")
 
-    # ================================================================
-    #  4.  LEARNING RATE SCHEDULE
-    # ================================================================
+
     if has_lr:
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.plot(epochs, lr, 'D-', color=COLORS['lr'], linewidth=2.5, markersize=8, label='Learning Rate')
@@ -182,15 +173,13 @@ def plot_metrics(log_file):
         if num_epochs > 1:
             ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
         fig.tight_layout()
-        path = f"results/lr_schedule_{base_name}.png"
+        path = f"results/plots/lr_schedule_{base_name}.png"
         fig.savefig(path, dpi=150, bbox_inches='tight')
         plt.close(fig)
         saved_files.append(path)
         print(f"  ✓ {path}")
 
-    # ================================================================
-    #  5.  MEMORY USAGE
-    # ================================================================
+
     if has_memory:
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.plot(epochs, memory, 'o-', color=COLORS['memory'], linewidth=2.5, markersize=6, label='Peak RSS')
@@ -205,15 +194,13 @@ def plot_metrics(log_file):
         if num_epochs > 1:
             ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
         fig.tight_layout()
-        path = f"results/memory_usage_{base_name}.png"
+        path = f"results/plots/memory_usage_{base_name}.png"
         fig.savefig(path, dpi=150, bbox_inches='tight')
         plt.close(fig)
         saved_files.append(path)
         print(f"  ✓ {path}")
 
-    # ================================================================
-    #  6.  EPOCH TIME + BATCH TIME
-    # ================================================================
+
     if has_epoch_time:
         fig, ax1 = plt.subplots(figsize=(10, 6))
         bars = ax1.bar(epochs, epoch_time, color=COLORS['epoch_time'], alpha=0.75, edgecolor='white', linewidth=0.5, label='Epoch Time')
@@ -235,15 +222,13 @@ def plot_metrics(log_file):
         if num_epochs > 1:
             ax1.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
         fig.tight_layout()
-        path = f"results/epoch_time_{base_name}.png"
+        path = f"results/plots/epoch_time_{base_name}.png"
         fig.savefig(path, dpi=150, bbox_inches='tight')
         plt.close(fig)
         saved_files.append(path)
         print(f"  ✓ {path}")
 
-    # ================================================================
-    #  7.  CUMULATIVE TIME
-    # ================================================================
+
     if has_cum_time:
         fig, ax = plt.subplots(figsize=(10, 6))
         cum_min = [t / 60.0 for t in cum_time]
@@ -253,20 +238,17 @@ def plot_metrics(log_file):
         if num_epochs > 1:
             ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
         fig.tight_layout()
-        path = f"results/cumulative_time_{base_name}.png"
+        path = f"results/plots/cumulative_time_{base_name}.png"
         fig.savefig(path, dpi=150, bbox_inches='tight')
         plt.close(fig)
         saved_files.append(path)
         print(f"  ✓ {path}")
 
-    # ================================================================
-    #  8.  COMBINED DASHBOARD (3×2 grid)
-    # ================================================================
+
     fig = plt.figure(figsize=(18, 16))
     fig.suptitle(f'Training Dashboard — {dataset_label}', fontsize=20, fontweight='bold', y=0.98)
     gs = GridSpec(3, 2, figure=fig, hspace=0.35, wspace=0.30)
 
-    # (0,0) Loss
     ax = fig.add_subplot(gs[0, 0])
     ax.plot(epochs, train_loss, 'o-', label='Train', color=COLORS['train_loss'], linewidth=2)
     ax.plot(epochs, val_loss, 's-', label='Val', color=COLORS['val_loss'], linewidth=2)
@@ -274,7 +256,6 @@ def plot_metrics(log_file):
     _style_ax(ax, 'Loss', 'Epoch', 'Loss', fontsize=11)
     ax.legend(fontsize=10)
 
-    # (0,1) Accuracy
     ax = fig.add_subplot(gs[0, 1])
     ax.plot(epochs, [a * 100 for a in train_acc], 'o-', label='Train', color=COLORS['train_acc'], linewidth=2)
     ax.plot(epochs, [a * 100 for a in val_acc], 's-', label='Val', color=COLORS['val_acc'], linewidth=2)
@@ -283,14 +264,12 @@ def plot_metrics(log_file):
     ax.set_ylim(0, 105)
     ax.legend(fontsize=10)
 
-    # (1,0) Overfitting Gap
     ax = fig.add_subplot(gs[1, 0])
     bar_colors = [COLORS['gap'] if g > 10 else '#66BB6A' for g in gap]
     ax.bar(epochs, gap, color=bar_colors, alpha=0.85, edgecolor='white', linewidth=0.5)
     ax.axhline(y=10, color='#E53935', linestyle='--', linewidth=1.2, alpha=0.7)
     _style_ax(ax, 'Generalization Gap', 'Epoch', 'Train−Val Acc Gap (%)', fontsize=11)
 
-    # (1,1) Learning Rate
     ax = fig.add_subplot(gs[1, 1])
     if has_lr:
         ax.plot(epochs, lr, 'D-', color=COLORS['lr'], linewidth=2, markersize=6)
@@ -301,7 +280,6 @@ def plot_metrics(log_file):
         ax.text(0.5, 0.5, 'N/A', ha='center', va='center', transform=ax.transAxes, fontsize=16, color='gray')
         _style_ax(ax, 'Learning Rate', 'Epoch', 'LR', fontsize=11)
 
-    # (2,0) Epoch Time
     ax = fig.add_subplot(gs[2, 0])
     if has_epoch_time:
         ax.bar(epochs, epoch_time, color=COLORS['epoch_time'], alpha=0.75, edgecolor='white', linewidth=0.5)
@@ -312,7 +290,6 @@ def plot_metrics(log_file):
             ax2.tick_params(axis='y', labelcolor=COLORS['batch_time'], labelsize=9)
     _style_ax(ax, 'Epoch Time', 'Epoch', 'Time (s)', fontsize=11)
 
-    # (2,1) Memory Usage
     ax = fig.add_subplot(gs[2, 1])
     if has_memory:
         ax.plot(epochs, memory, 'o-', color=COLORS['memory'], linewidth=2, markersize=5)
@@ -331,17 +308,15 @@ def plot_metrics(log_file):
         ax.text(0.5, 0.5, 'N/A', ha='center', va='center', transform=ax.transAxes, fontsize=16, color='gray')
         _style_ax(ax, 'Memory', 'Epoch', 'MB', fontsize=11)
 
-    path = f"results/combined_dashboard_{base_name}.png"
+    path = f"results/plots/combined_dashboard_{base_name}.png"
     fig.savefig(path, dpi=150, bbox_inches='tight')
     plt.close(fig)
     saved_files.append(path)
     print(f"  ✓ {path}")
 
-    # ================================================================
-    #  SUMMARY
-    # ================================================================
+
     print(f"\n{'═' * 50}")
-    print(f"  {len(saved_files)} plots saved to 'results/' directory")
+    print(f"  {len(saved_files)} plots saved to 'results/plots/' directory")
     print(f"{'═' * 50}")
     for f in saved_files:
         print(f"    • {f}")
@@ -363,7 +338,7 @@ def plot_metrics(log_file):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate training metric plots from CSV logs")
-    parser.add_argument('--log_file', type=str, default='results/training_log_mnist.csv',
+    parser.add_argument('--log_file', type=str, default='results/training_logs/training_log_mnist.csv',
                         help="Path to the training log CSV file")
     args = parser.parse_args()
     plot_metrics(args.log_file)

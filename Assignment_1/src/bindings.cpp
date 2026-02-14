@@ -66,6 +66,10 @@ PYBIND11_MODULE(my_backend, m) {
     m_ops.def("random_horizontal_flip", &ops::random_horizontal_flip);
     m_ops.def("random_crop_with_padding", &ops::random_crop_with_padding);
     
+    // Global Average Pooling
+    m_ops.def("global_avg_pool2d", &ops::global_avg_pool2d);
+    m_ops.def("global_avg_pool2d_backward", &ops::global_avg_pool2d_backward);
+    
     // New Ops
     m_ops.def("load_image", &ops::load_image);
     m_ops.def("load_image_batch", &ops::load_image_batch);

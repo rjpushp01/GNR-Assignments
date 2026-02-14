@@ -32,14 +32,8 @@ from my_framework.model_utils import print_model_summary, count_parameters
 
 
 def accuracy(outputs, labels):
-    # outputs: [B, C], labels: [B]
-    # Use C++ argmax
-    # mb.ops.argmax(outputs.data, axis=1) returns vector<int>
-    preds = mb.ops.argmax(outputs.data, 1) # List of ints
+    preds = mb.ops.argmax(outputs.data, 1)
     
-    # labels.data is Tensor(float). Convert to int list?
-    # Or iterate.
-    # labels is Tensor. to_list() returns flatten float list.
     targets = labels.to_list()
     
     correct = 0
@@ -52,8 +46,7 @@ def accuracy(outputs, labels):
 def save_model(model, path):
     params = {}
     for name, value in model.__dict__.items():
-         if hasattr(value, 'weight'):  # Layer with weight
-             # Save as flat list + shape
+         if hasattr(value, 'weight'):
              params[name + '.weight'] = {'data': value.weight.to_list(), 'shape': value.weight.shape}
          if hasattr(value, 'bias') and value.bias is not None:
              params[name + '.bias'] = {'data': value.bias.to_list(), 'shape': value.bias.shape}
@@ -91,18 +84,12 @@ def get_memory_mb():
 
 
 def train(args):
-    # Ensure results directory
-    if not os.path.exists("results"):
-        os.makedirs("results")
+    # Ensure results subdirectories exist
+    for sub in ["results/models", "results/training_logs", "results/test_results", "results/plots"]:
+        os.makedirs(sub, exist_ok=True)
 
-    # ================================================================
-    #  DATASET LOADING  (with timing)
-    # ================================================================
-    print("=" * 70)
     print(f"  DATASET: {args.dataset.upper()}")
-    print("=" * 70)
     
-    # DataLoader now uses C++ logic internally
     print(f"\nLoading training data from '{args.data_path}' ...")
     load_start = time.time()
     train_loader = DataLoader(args.data_path, batch_size=args.batch_size, shuffle=True, mode='train')
@@ -118,12 +105,9 @@ def train(args):
     total_load_time = train_load_time + val_load_time
     print(f"  Total dataset loading time: {total_load_time:.2f}s")
 
-    # ================================================================
-    #  MODEL INITIALIZATION
-    # ================================================================
     if args.dataset == 'mnist':
         model = MNIST_Model()
-        input_shape = (1, 32, 32)   # Resized to 32x32 by DataLoader
+        input_shape = (1, 32, 32)
     else:
         model = CIFAR_Model()
         input_shape = (3, 32, 32)
@@ -131,17 +115,14 @@ def train(args):
     criterion = CrossEntropyLoss()
     optimizer = Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
-    summary_path = f"results/model_summary_{args.dataset}.txt"
+    summary_path = f"results/training_logs/model_summary_{args.dataset}.txt"
     model_summary = print_model_summary(model, input_shape, file=summary_path)
 
     total_params = model_summary["total_params"]
     total_macs = model_summary["total_macs"]
     total_flops = model_summary["total_flops"]
 
-    # ================================================================
-    #  LOG FILE
-    # ================================================================
-    log_filename = f"results/training_log_{args.dataset}.csv"
+    log_filename = f"results/training_logs/training_log_{args.dataset}.csv"
     log_file = open(log_filename, "w", newline='')
     writer = csv.writer(log_file)
     writer.writerow([
@@ -157,7 +138,6 @@ def train(args):
     print(f"  Data path         : {args.data_path}")
     print(f"  Epochs            : {args.epochs}")
     print(f"  Batch size        : {args.batch_size}")
-    # print(f"  Training samples  : {train_loader.num_samples}")
     print(f"  Dataset load time : {total_load_time:.2f}s")
     print(f"  Weight decay      : {args.weight_decay}")
     print("=" * 70)
@@ -167,9 +147,8 @@ def train(args):
     best_val_acc = 0.0
     best_epoch = 0
 
-    # Cosine Annealing LR Schedule
     initial_lr = args.lr
-    min_lr = initial_lr * 0.01  # Decay to 1% of initial
+    min_lr = initial_lr * 0.1
     total_epochs = args.epochs
 
     def cosine_lr(epoch, total_epochs, initial_lr, min_lr):
@@ -221,7 +200,6 @@ def train(args):
         avg_acc = epoch_acc / num_batches
         avg_batch_time = sum(batch_times) / len(batch_times) if batch_times else 0
 
-        # Validation (eval mode — disables dropout)
         val_start = time.time()
         model.eval()
         val_loss, val_acc = validate(model, val_loader, criterion)
@@ -236,7 +214,6 @@ def train(args):
             best_val_acc = val_acc
             best_epoch = epoch + 1
 
-        # Epoch summary
         print(f"\n{'─' * 70}")
         print(f"  Epoch {epoch+1}/{args.epochs} Summary:")
         print(f"    Learning Rate  : {current_lr:.6f}")
@@ -256,7 +233,6 @@ def train(args):
         ])
         log_file.flush()
 
-    # End
     print("\n" + "=" * 70)
     print("  TRAINING COMPLETE")
     print("=" * 70)
@@ -265,7 +241,7 @@ def train(args):
     print(f"  Best Val Accuracy : {best_val_acc:.4f}  (Epoch {best_epoch})")
     print("=" * 70)
 
-    save_path = f"results/{args.dataset}_model.pkl"
+    save_path = f"results/models/{args.dataset}_model.pkl"
     save_model(model, save_path)
     log_file.close()
 

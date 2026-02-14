@@ -14,8 +14,7 @@ from my_framework.data import DataLoader
 from my_framework.model_utils import print_model_summary
 
 def accuracy(outputs, labels):
-    # Use C++ argmax
-    preds = mb.ops.argmax(outputs.data, 1) # List of ints
+    preds = mb.ops.argmax(outputs.data, 1)
     targets = labels.to_list()
     
     correct = 0
@@ -33,15 +32,10 @@ def load_model(path, model):
         params = pickle.load(f)
         
     for name, layer in model.__dict__.items():
-        # Load Weight
-        w_key = name + '.weight'
         if hasattr(layer, 'weight') and w_key in params:
             p = params[w_key]
-            # p is {'data': list, 'shape': list}
-            # Assign new C++ Tensor to layer.weight.data
             layer.weight.data = mb.Tensor(p['shape'], p['data'])
             
-        # Load Bias
         b_key = name + '.bias'
         if hasattr(layer, 'bias') and b_key in params:
             p = params[b_key]
@@ -50,12 +44,7 @@ def load_model(path, model):
     print("Model loaded successfully.")
 
 def test(args):
-    # ================================================================
-    #  DATASET LOADING
-    # ================================================================
-    print("=" * 70)
     print(f"  TESTING DATASET: {args.dataset.upper()}")
-    print("=" * 70)
 
     print(f"Loading test data from '{args.data_path}' ...")
     load_start = time.time()
@@ -63,9 +52,6 @@ def test(args):
     load_time = time.time() - load_start
     print(f"  Test data loaded in {load_time:.2f}s")
 
-    # ================================================================
-    #  MODEL INITIALIZATION
-    # ================================================================
     if args.dataset == 'mnist':
         model = MNIST_Model()
         input_shape = (1, 32, 32)
@@ -73,17 +59,12 @@ def test(args):
         model = CIFAR_Model()
         input_shape = (3, 32, 32)
 
-    # Load Weights
     load_model(args.model_path, model)
     model.eval()
 
-    # Print Summary for Reporting
     print("\nModel Summary:")
     model_summary = print_model_summary(model, input_shape)
 
-    # ================================================================
-    #  EVALUATION
-    # ================================================================
     total_acc = 0.0
     num_batches = 0
     total_samples = 0
@@ -91,12 +72,9 @@ def test(args):
     print("\nStarting evaluation...")
     eval_start = time.time()
     
-    # Iterate
     for images, labels in test_loader:
-        # Forward
         outputs = model(images)
         
-        # Accuracy
         acc = accuracy(outputs, labels)
         
         total_acc += acc
@@ -123,11 +101,14 @@ def test(args):
     print(f"  FLOPs / forward   : {model_summary['total_flops']:,}")
     print("=" * 70)
 
-    # Save results
-    result_file = "results/test_results.txt"
-    with open(result_file, "a") as f:
-        f.write(f"\n{'=' * 60}\n")
+    os.makedirs("results/test_results", exist_ok=True)
+    result_file = f"results/test_results/{args.dataset}_test_results.txt"
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(result_file, "w") as f:
+        f.write(f"{'=' * 60}\n")
         f.write(f"Evaluation — {args.dataset.upper()}\n")
+        f.write(f"Run timestamp     : {timestamp}\n")
         f.write(f"{'=' * 60}\n")
         f.write(f"Model path        : {args.model_path}\n")
         f.write(f"Test samples      : {test_loader.num_samples}\n")
@@ -137,7 +118,7 @@ def test(args):
         f.write(f"Trainable params  : {model_summary['total_params']:,}\n")
         f.write(f"MACs / forward    : {model_summary['total_macs']:,}\n")
         f.write(f"FLOPs / forward   : {model_summary['total_flops']:,}\n")
-    print(f"\nResults appended to {result_file}")
+    print(f"\nResults saved to {result_file}")
 
 
 if __name__ == "__main__":
