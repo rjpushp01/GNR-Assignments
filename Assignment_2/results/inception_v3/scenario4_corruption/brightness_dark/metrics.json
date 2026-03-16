@@ -1,0 +1,12 @@
+{
+  "scenario": "corruption_robustness",
+  "model": "inception_v3",
+  "corruption": "brightness_dark",
+  "corruption_type": "brightness_dark",
+  "severity": null,
+  "clean_acc": 87.63183125599232,
+  "corrupted_acc": 82.64621284755513,
+  "corruption_error": 0.17353787152444866,
+  "relative_robustness": 0.9431072210065646,
+  "total_eval_time": 19.41640067100525
+}

@@ -1,0 +1,23 @@
+{
+  "scenario": "finetuning",
+  "model": "densenet121",
+  "strategy": "last_block",
+  "best_val_acc": 93.00095877277086,
+  "final_train_acc": 97.8601997146933,
+  "final_val_acc": 92.56951102588687,
+  "trainable_params": 2190878,
+  "trainable_pct": 31.36723818065042,
+  "lr_used": 0.0001,
+  "strategy_info": {
+    "description": "Freeze early layers; unfreeze last conv block + classifier."
+  },
+  "total_training_time": 688.292328119278,
+  "train_pass_time": 495.0940580368042,
+  "val_pass_time": 193.19701147079468,
+  "data_fetch_time": 40.10933804512024,
+  "dataset_setup_time": 0.021931886672973633,
+  "avg_epoch_time": 22.943077603975933,
+  "total_params": 6984606,
+  "macs_str": "2.868 GMac",
+  "flops_str": "5.735 GFlops"
+}

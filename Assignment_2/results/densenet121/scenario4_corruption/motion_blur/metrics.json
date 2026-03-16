@@ -1,0 +1,12 @@
+{
+  "scenario": "corruption_robustness",
+  "model": "densenet121",
+  "corruption": "motion_blur",
+  "corruption_type": "motion_blur",
+  "severity": null,
+  "clean_acc": 90.12464046021093,
+  "corrupted_acc": 14.23777564717162,
+  "corruption_error": 0.8576222435282838,
+  "relative_robustness": 0.15797872340425534,
+  "total_eval_time": 19.422767639160156
+}

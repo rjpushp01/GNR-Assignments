@@ -1,0 +1,21 @@
+{
+  "scenario": "few_shot",
+  "model": "inception_v3",
+  "pct": 100,
+  "num_train_samples": 4907,
+  "num_val_samples": 2086,
+  "best_val_acc": 86.81687440076702,
+  "final_train_acc": 92.86733238231099,
+  "final_val_acc": 85.8581016299137,
+  "train_val_gap": 7.009230752397286,
+  "trainable_pct": 0.2813653731915512,
+  "total_training_time": 786.995519399643,
+  "train_pass_time": 591.741391658783,
+  "val_pass_time": 195.25286293029785,
+  "data_fetch_time": 169.21104097366333,
+  "dataset_setup_time": 0.022287368774414062,
+  "avg_epoch_time": 26.233183979988098,
+  "total_params": 21847038,
+  "macs_str": "5.737 GMac",
+  "flops_str": "11.473 GFlops"
+}

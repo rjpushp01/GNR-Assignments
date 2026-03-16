@@ -1,0 +1,21 @@
+{
+  "scenario": "few_shot",
+  "model": "resnet50",
+  "pct": 100,
+  "num_train_samples": 4907,
+  "num_val_samples": 2086,
+  "best_val_acc": 86.0019175455417,
+  "final_train_acc": 88.46545750968005,
+  "final_val_acc": 85.52253116011505,
+  "train_val_gap": 2.942926349564999,
+  "trainable_pct": 0.2608031344913439,
+  "total_training_time": 618.1965806484222,
+  "train_pass_time": 450.3953776359558,
+  "val_pass_time": 167.7997851371765,
+  "data_fetch_time": 78.75223994255066,
+  "dataset_setup_time": 0.03918862342834473,
+  "avg_epoch_time": 20.60655268828074,
+  "total_params": 23569502,
+  "macs_str": "4.130 GMac",
+  "flops_str": "8.261 GFlops"
+}

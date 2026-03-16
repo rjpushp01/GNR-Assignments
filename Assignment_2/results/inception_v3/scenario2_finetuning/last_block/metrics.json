@@ -1,0 +1,23 @@
+{
+  "scenario": "finetuning",
+  "model": "inception_v3",
+  "strategy": "last_block",
+  "best_val_acc": 95.06232023010547,
+  "final_train_acc": 99.71469329529243,
+  "final_val_acc": 94.96644295302013,
+  "trainable_params": 12881182,
+  "trainable_pct": 58.96077079190323,
+  "lr_used": 0.0001,
+  "strategy_info": {
+    "description": "Freeze early layers; unfreeze last conv block + classifier."
+  },
+  "total_training_time": 988.7056636810303,
+  "train_pass_time": 751.5494148731232,
+  "val_pass_time": 237.15465140342712,
+  "data_fetch_time": 53.110687494277954,
+  "dataset_setup_time": 0.02128911018371582,
+  "avg_epoch_time": 32.95685545603434,
+  "total_params": 21847038,
+  "macs_str": "5.737 GMac",
+  "flops_str": "11.473 GFlops"
+}

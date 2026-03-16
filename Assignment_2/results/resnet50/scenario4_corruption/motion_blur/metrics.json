@@ -1,0 +1,12 @@
+{
+  "scenario": "corruption_robustness",
+  "model": "resnet50",
+  "corruption": "motion_blur",
+  "corruption_type": "motion_blur",
+  "severity": null,
+  "clean_acc": 85.71428571428571,
+  "corrupted_acc": 29.242569511025888,
+  "corruption_error": 0.7075743048897412,
+  "relative_robustness": 0.3411633109619687,
+  "total_eval_time": 18.78211522102356
+}

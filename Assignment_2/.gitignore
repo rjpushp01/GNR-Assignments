@@ -34,10 +34,8 @@ env/
 env.bak/
 venv.bak/
 
-# Data and Results
+# Data
 train_data/
-results/
-*.pdf
 
 # Jupyter Notebook
 .ipynb_checkpoints

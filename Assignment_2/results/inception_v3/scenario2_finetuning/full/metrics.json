@@ -1,0 +1,23 @@
+{
+  "scenario": "finetuning",
+  "model": "inception_v3",
+  "strategy": "full",
+  "best_val_acc": 95.54170661553212,
+  "final_train_acc": 99.71469329529243,
+  "final_val_acc": 95.20613614573347,
+  "trainable_params": 21847038,
+  "trainable_pct": 100.0,
+  "lr_used": 0.0001,
+  "strategy_info": {
+    "description": "Full fine-tuning of entire backbone + classifier."
+  },
+  "total_training_time": 1726.8727433681488,
+  "train_pass_time": 1535.9089288711548,
+  "val_pass_time": 190.9624161720276,
+  "data_fetch_time": 35.22235584259033,
+  "dataset_setup_time": 0.039785146713256836,
+  "avg_epoch_time": 57.56242477893829,
+  "total_params": 21847038,
+  "macs_str": "5.737 GMac",
+  "flops_str": "11.473 GFlops"
+}

@@ -1,0 +1,23 @@
+{
+  "scenario": "finetuning",
+  "model": "densenet121",
+  "strategy": "full",
+  "best_val_acc": 96.06903163950143,
+  "final_train_acc": 99.5516608926024,
+  "final_val_acc": 95.49376797698946,
+  "trainable_params": 6984606,
+  "trainable_pct": 100.0,
+  "lr_used": 0.0001,
+  "strategy_info": {
+    "description": "Full fine-tuning of entire backbone + classifier."
+  },
+  "total_training_time": 1415.373550415039,
+  "train_pass_time": 1238.9289615154266,
+  "val_pass_time": 176.44341778755188,
+  "data_fetch_time": 21.63287591934204,
+  "dataset_setup_time": 0.02587413787841797,
+  "avg_epoch_time": 47.17911834716797,
+  "total_params": 6984606,
+  "macs_str": "2.868 GMac",
+  "flops_str": "5.735 GFlops"
+}

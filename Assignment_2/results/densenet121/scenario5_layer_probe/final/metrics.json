@@ -1,0 +1,18 @@
+{
+  "scenario": "layer_probe",
+  "model": "densenet121",
+  "depth": "final",
+  "layer_name": "features.denseblock4",
+  "feature_dim": 1024,
+  "best_val_acc": 93.14477443695068,
+  "feature_norms": {
+    "mean_norm": 28.364601135253906,
+    "std_norm": 0.7313682436943054,
+    "min_norm": 26.231746673583984,
+    "max_norm": 31.50196647644043
+  },
+  "extraction_time": 28.519485235214233,
+  "total_train_time": 1.5691218376159668,
+  "avg_epoch_time": 0.031371865272521976,
+  "total_scenario_time": 38.86059904098511
+}

@@ -1,0 +1,41 @@
+{
+  "scenario": "finetuning",
+  "model": "inception_v3",
+  "strategy": "selective_20pct",
+  "best_val_acc": 93.57622243528284,
+  "final_train_acc": 99.59241899327492,
+  "final_val_acc": 93.48034515819751,
+  "trainable_params": 4252702,
+  "trainable_pct": 19.46580584516766,
+  "lr_used": 0.001,
+  "strategy_info": {
+    "total_backbone_params": 21785568,
+    "unfrozen_params": 4191232,
+    "actual_pct": 19.238571149487587,
+    "unfrozen_layers": [
+      "Mixed_7c.branch_pool.bn",
+      "Mixed_7c.branch_pool.conv",
+      "Mixed_7c.branch3x3dbl_3b.bn",
+      "Mixed_7c.branch3x3dbl_3b.conv",
+      "Mixed_7c.branch3x3dbl_3a.bn",
+      "Mixed_7c.branch3x3dbl_3a.conv",
+      "Mixed_7c.branch3x3dbl_2.bn",
+      "Mixed_7c.branch3x3dbl_2.conv",
+      "Mixed_7c.branch3x3dbl_1.bn",
+      "Mixed_7c.branch3x3dbl_1.conv",
+      "Mixed_7c.branch3x3_2b.bn",
+      "Mixed_7c.branch3x3_2b.conv",
+      "Mixed_7c.branch3x3_2a.bn"
+    ],
+    "description": "Unfreeze deepest backbone layers until 20% of backbone params are trainable. Rationale: deepest layers encode most task-specific features, so updating them maximises transfer while minimising overfitting risk."
+  },
+  "total_training_time": 1182.8605632781982,
+  "train_pass_time": 906.5635693073273,
+  "val_pass_time": 276.2949364185333,
+  "data_fetch_time": 279.58572483062744,
+  "dataset_setup_time": 0.07024645805358887,
+  "avg_epoch_time": 39.42868544260661,
+  "total_params": 21847038,
+  "macs_str": "5.737 GMac",
+  "flops_str": "11.473 GFlops"
+}

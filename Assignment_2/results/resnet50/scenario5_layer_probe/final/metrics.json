@@ -1,0 +1,18 @@
+{
+  "scenario": "layer_probe",
+  "model": "resnet50",
+  "depth": "final",
+  "layer_name": "layer3",
+  "feature_dim": 1024,
+  "best_val_acc": 95.1102614402771,
+  "feature_norms": {
+    "mean_norm": 45.10411071777344,
+    "std_norm": 1.359239935874939,
+    "min_norm": 41.37091827392578,
+    "max_norm": 53.54928970336914
+  },
+  "extraction_time": 25.971089363098145,
+  "total_train_time": 1.2799255847930908,
+  "avg_epoch_time": 0.025586991310119628,
+  "total_scenario_time": 35.65595746040344
+}

@@ -1,0 +1,12 @@
+{
+  "scenario": "corruption_robustness",
+  "model": "densenet121",
+  "corruption": "gaussian_0.10",
+  "corruption_type": "gaussian",
+  "severity": 0.1,
+  "clean_acc": 90.12464046021093,
+  "corrupted_acc": 2.876318312559923,
+  "corruption_error": 0.9712368168744008,
+  "relative_robustness": 0.031914893617021274,
+  "total_eval_time": 16.89990735054016
+}

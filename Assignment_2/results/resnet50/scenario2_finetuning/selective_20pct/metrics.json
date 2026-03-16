@@ -1,0 +1,35 @@
+{
+  "scenario": "finetuning",
+  "model": "resnet50",
+  "strategy": "selective_20pct",
+  "best_val_acc": 92.42569511025887,
+  "final_train_acc": 98.797636030161,
+  "final_val_acc": 92.09012464046022,
+  "trainable_params": 4528158,
+  "trainable_pct": 19.211937528421263,
+  "lr_used": 0.001,
+  "strategy_info": {
+    "total_backbone_params": 23508032,
+    "unfrozen_params": 4466688,
+    "actual_pct": 19.000688785858383,
+    "unfrozen_layers": [
+      "layer4.2.bn3",
+      "layer4.2.conv3",
+      "layer4.2.bn2",
+      "layer4.2.conv2",
+      "layer4.2.bn1",
+      "layer4.2.conv1",
+      "layer4.1.bn3"
+    ],
+    "description": "Unfreeze deepest backbone layers until 20% of backbone params are trainable. Rationale: deepest layers encode most task-specific features, so updating them maximises transfer while minimising overfitting risk."
+  },
+  "total_training_time": 595.5735146999359,
+  "train_pass_time": 430.20330238342285,
+  "val_pass_time": 165.3690733909607,
+  "data_fetch_time": 25.277899742126465,
+  "dataset_setup_time": 0.0223238468170166,
+  "avg_epoch_time": 19.852450489997864,
+  "total_params": 23569502,
+  "macs_str": "4.130 GMac",
+  "flops_str": "8.261 GFlops"
+}

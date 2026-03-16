@@ -1,0 +1,16 @@
+{
+  "scenario": "linear_probe",
+  "model": "resnet50",
+  "best_val_acc": 85.81016299137104,
+  "trainable_pct": 0.2608031344913439,
+  "total_training_time": 566.1312596797943,
+  "train_pass_time": 401.6882653236389,
+  "val_pass_time": 164.44178891181946,
+  "data_fetch_time": 30.728603839874268,
+  "dataset_setup_time": 0.021305561065673828,
+  "avg_epoch_time": 18.87104198932648,
+  "total_params": 23569502,
+  "trainable_params": 61470,
+  "macs_str": "4.130 GMac",
+  "flops_str": "8.261 GFlops"
+}

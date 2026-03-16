@@ -1,0 +1,23 @@
+{
+  "scenario": "finetuning",
+  "model": "resnet50",
+  "strategy": "full",
+  "best_val_acc": 95.25407478427613,
+  "final_train_acc": 99.00142653352354,
+  "final_val_acc": 95.11025886864813,
+  "trainable_params": 23569502,
+  "trainable_pct": 100.0,
+  "lr_used": 0.0001,
+  "strategy_info": {
+    "description": "Full fine-tuning of entire backbone + classifier."
+  },
+  "total_training_time": 1504.7737035751343,
+  "train_pass_time": 1309.0088729858398,
+  "val_pass_time": 195.76252007484436,
+  "data_fetch_time": 38.2417106628418,
+  "dataset_setup_time": 0.02176690101623535,
+  "avg_epoch_time": 50.159123452504474,
+  "total_params": 23569502,
+  "macs_str": "4.130 GMac",
+  "flops_str": "8.261 GFlops"
+}

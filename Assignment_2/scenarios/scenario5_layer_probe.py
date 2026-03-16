@@ -70,7 +70,7 @@ def train_linear_on_features(
     val_features: np.ndarray,
     val_labels: np.ndarray,
     num_classes: int = 30,
-    num_epochs: int = 50,
+    num_epochs: int = 30,
     lr: float = 1e-2,
     device: torch.device = None,
 ):
@@ -101,7 +101,12 @@ def train_linear_on_features(
     batch_size = 256
     n = X_train.shape[0]
 
+    import time
+    t_start = time.time()
+    epoch_times = []
+
     for epoch in range(num_epochs):
+        t0 = time.time()
         classifier.train()
         perm = torch.randperm(n)
         epoch_loss, epoch_acc = 0.0, 0.0
@@ -127,13 +132,20 @@ def train_linear_on_features(
             val_losses.append(val_loss)
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
+        epoch_times.append(time.time() - t0)
+        if (epoch + 1) % 5 == 0 or epoch == 0 or epoch == num_epochs - 1:
+            print(f"    Epoch {epoch+1:2d}/{num_epochs} | train_loss={train_losses[-1]:.4f}  "
+                  f"train_acc={train_accs[-1]:.2f}%  val_acc={val_accs[-1]:.2f}%")
 
+    total_train_time = time.time() - t_start
     return {
         "train_accs": train_accs,
         "val_accs": val_accs,
         "train_losses": train_losses,
         "val_losses": val_losses,
         "best_val_acc": best_val_acc,
+        "total_train_time": total_train_time,
+        "avg_epoch_time": np.mean(epoch_times),
     }
 
 
@@ -148,6 +160,8 @@ def run(
     Run one depth level for Scenario 5.
     depth: 'early', 'mid', or 'final'
     """
+    import time
+    start_total = time.time()
     assert depth in VALID_DEPTHS, f"depth must be one of {VALID_DEPTHS}"
 
     print(f"\n{'='*60}")
@@ -167,11 +181,13 @@ def run(
     model.eval()
 
     # ── Full train/val data for classifier training ────────────────────────
+    import time
     from utils.transforms import get_transforms
     from torchvision.datasets import ImageFolder
     from torch.utils.data import Subset
     from utils.dataset import stratified_split
 
+    t_ds = time.time()
     _, val_transform = get_transforms(model_name)
     full_dataset = ImageFolder(root=data_root, transform=val_transform)
     class_names = full_dataset.classes
@@ -185,11 +201,15 @@ def run(
         Subset(full_dataset, val_indices),
         batch_size=cfg["batch_size"], shuffle=False, num_workers=4, pin_memory=True,
     )
+    dataset_setup_time = time.time() - t_ds
+    print(f"  Dataset setup took: {dataset_setup_time:.2f}s")
 
     # ── Extract features ────────────────────────────────────────────────────
     print(f"  Extracting {depth} features from '{LAYER_HOOKS[model_name][depth]}'...")
+    t_ext = time.time()
     train_features, train_labels = extract_layer_features(model, train_loader, model_name, depth, device)
     val_features, val_labels = extract_layer_features(model, val_loader, model_name, depth, device)
+    extraction_time = time.time() - t_ext
     print(f"  Feature dim: {train_features.shape[1]}")
 
     # Feature norm statistics
@@ -237,6 +257,10 @@ def run(
         "feature_dim": int(train_features.shape[1]),
         "best_val_acc": history["best_val_acc"],
         "feature_norms": feat_norms,
+        "extraction_time": extraction_time,
+        "total_train_time": history["total_train_time"],
+        "avg_epoch_time": history["avg_epoch_time"],
+        "total_scenario_time": time.time() - start_total,
     }
     save_metrics_json(metrics, os.path.join(save_dir, "metrics.json"))
 

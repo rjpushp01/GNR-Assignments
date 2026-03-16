@@ -68,13 +68,16 @@ def run(model_name: str, data_root: str, save_dir: str, device: torch.device, st
 
     cfg = MODEL_CONFIGS[model_name]
 
-    # ── Load data ──────────────────────────────────────────────────────────
+    import time
+    t_dataset_start = time.time()
     train_loader, val_loader, class_names = get_dataloaders(
         model_name=model_name,
         data_root=data_root,
         pct=1.0,
         seed=42,
     )
+    dataset_setup_time = time.time() - t_dataset_start
+    print(f"  Dataset setup took: {dataset_setup_time:.2f}s")
 
     # ── Load & configure model ─────────────────────────────────────────────
     model = load_model(model_name, num_classes=len(class_names), pretrained=True).to(device)
@@ -135,6 +138,12 @@ def run(model_name: str, data_root: str, save_dir: str, device: torch.device, st
         "trainable_pct": param_info["trainable_pct"],
         "lr_used": lr,
         "strategy_info": strategy_info,
+        "total_training_time": history.get("total_time"),
+        "train_pass_time": history.get("total_train_pass_time"),
+        "val_pass_time": history.get("total_val_pass_time"),
+        "data_fetch_time": history.get("total_data_fetch_time"),
+        "dataset_setup_time": dataset_setup_time,
+        "avg_epoch_time": history.get("avg_epoch_time"),
         **{k: model_info[k] for k in ["total_params", "macs_str", "flops_str"] if k in model_info},
     }
     save_metrics_json(metrics, os.path.join(save_dir, "metrics.json"))

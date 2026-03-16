@@ -1,0 +1,11 @@
+{
+  "model_name": "densenet121",
+  "total_params": 6984606,
+  "trainable_params": 2190878,
+  "frozen_params": 4793728,
+  "trainable_pct": 31.36723818065042,
+  "macs": 2867614238,
+  "flops": 5735228476,
+  "macs_str": "2.868 GMac",
+  "flops_str": "5.735 GFlops"
+}

@@ -1,0 +1,4 @@
+model,total_params_M,trainable_params_M,frozen_params_M,macs_str,flops_str
+resnet50,23.569502,0.06147,23.508032,4.130 GMac,8.261 GFlops
+inception_v3,21.847038,0.06147,21.785568,5.737 GMac,11.473 GFlops
+densenet121,6.984606,0.03075,6.953856,2.868 GMac,5.735 GFlops

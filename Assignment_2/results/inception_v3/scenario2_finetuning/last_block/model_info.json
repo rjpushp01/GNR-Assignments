@@ -1,0 +1,11 @@
+{
+  "model_name": "inception_v3",
+  "total_params": 21847038,
+  "trainable_params": 12881182,
+  "frozen_params": 8965856,
+  "trainable_pct": 58.96077079190323,
+  "macs": 5736705534,
+  "flops": 11473411068,
+  "macs_str": "5.737 GMac",
+  "flops_str": "11.473 GFlops"
+}

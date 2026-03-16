@@ -1,0 +1,21 @@
+{
+  "scenario": "few_shot",
+  "model": "densenet121",
+  "pct": 5,
+  "num_train_samples": 233,
+  "num_val_samples": 2086,
+  "best_val_acc": 65.34036433365293,
+  "final_train_acc": 92.27467811158799,
+  "final_val_acc": 65.19654841802493,
+  "train_val_gap": 27.078129693563056,
+  "trainable_pct": 0.4402538954953222,
+  "total_training_time": 139.00397729873657,
+  "train_pass_time": 22.522689819335938,
+  "val_pass_time": 116.48059821128845,
+  "data_fetch_time": 15.59739375114441,
+  "dataset_setup_time": 0.02308821678161621,
+  "avg_epoch_time": 6.950198864936828,
+  "total_params": 6984606,
+  "macs_str": "2.868 GMac",
+  "flops_str": "5.735 GFlops"
+}

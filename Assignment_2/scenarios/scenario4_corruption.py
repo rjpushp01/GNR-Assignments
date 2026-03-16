@@ -24,6 +24,7 @@ Usage:
 
 import os
 import json
+import time
 import torch
 import torch.nn as nn
 from torchvision.datasets import ImageFolder
@@ -83,6 +84,7 @@ def run(
         model_checkpoint_dir: Directory of the Scenario 1 best_model.pth.
                               If None, inferred from results/{model_name}/scenario1_linear_probe/
     """
+    start_time = time.time() # Start total execution timer
     assert corruption in VALID_CORRUPTIONS, f"corruption must be one of {VALID_CORRUPTIONS}"
 
     print(f"\n{'='*60}")
@@ -97,7 +99,7 @@ def run(
     if model_checkpoint_dir is None:
         # Default: look relative to results/
         base = os.path.dirname(os.path.dirname(save_dir))
-        model_checkpoint_dir = os.path.join(base, model_name, "scenario1_linear_probe")
+        model_checkpoint_dir = os.path.join(base, "scenario1_linear_probe")
     
     checkpoint_path = os.path.join(model_checkpoint_dir, "best_model.pth")
 
@@ -110,6 +112,7 @@ def run(
     else:
         print(f"  ⚠ Checkpoint not found at {checkpoint_path}. Using pretrained weights.")
 
+    t_ds = time.time()
     # ── Build corrupted validation loader ─────────────────────────────────
     corruption_type, severity = CORRUPTION_PARAMS[corruption]
     corrupt_transform = get_corruption_transform(model_name, corruption_type, severity)
@@ -141,8 +144,13 @@ def run(
         num_workers=4,
         pin_memory=True,
     )
+    dataset_setup_time = time.time() - t_ds
+    print(f"  Dataset setup took: {dataset_setup_time:.2f}s")
+    
+    t0 = time.time()
     clean_acc = evaluate_corruption(model, clean_loader, device, num_classes)
     corrupted_acc = evaluate_corruption(model, val_loader, device, num_classes)
+    eval_time = time.time() - t0
 
     ce = corruption_error(corrupted_acc)
     rr = relative_robustness(corrupted_acc, clean_acc)
@@ -163,6 +171,7 @@ def run(
         "corrupted_acc": corrupted_acc,
         "corruption_error": ce,
         "relative_robustness": rr,
+        "total_eval_time": eval_time,
     }
     save_metrics_json(metrics, os.path.join(save_dir, "metrics.json"))
     print(f"  ✓ Results saved to: {save_dir}")

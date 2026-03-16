@@ -1,0 +1,23 @@
+{
+  "scenario": "finetuning",
+  "model": "resnet50",
+  "strategy": "last_block",
+  "best_val_acc": 93.52828379674017,
+  "final_train_acc": 96.06684328510292,
+  "final_val_acc": 93.09683604985618,
+  "trainable_params": 15026206,
+  "trainable_pct": 63.75275133093605,
+  "lr_used": 0.0001,
+  "strategy_info": {
+    "description": "Freeze early layers; unfreeze last conv block + classifier."
+  },
+  "total_training_time": 666.934900522232,
+  "train_pass_time": 503.03203105926514,
+  "val_pass_time": 163.90167045593262,
+  "data_fetch_time": 23.35382866859436,
+  "dataset_setup_time": 0.021101951599121094,
+  "avg_epoch_time": 22.231163350741067,
+  "total_params": 23569502,
+  "macs_str": "4.130 GMac",
+  "flops_str": "8.261 GFlops"
+}

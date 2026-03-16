@@ -1,0 +1,12 @@
+{
+  "scenario": "corruption_robustness",
+  "model": "resnet50",
+  "corruption": "brightness_bright",
+  "corruption_type": "brightness_bright",
+  "severity": null,
+  "clean_acc": 85.81016299137104,
+  "corrupted_acc": 82.02301054650047,
+  "corruption_error": 0.17976989453499526,
+  "relative_robustness": 0.9558659217877095,
+  "total_eval_time": 16.161559104919434
+}

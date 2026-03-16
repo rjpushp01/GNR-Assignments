@@ -1,0 +1,12 @@
+{
+  "scenario": "corruption_robustness",
+  "model": "inception_v3",
+  "corruption": "motion_blur",
+  "corruption_type": "motion_blur",
+  "severity": null,
+  "clean_acc": 87.63183125599232,
+  "corrupted_acc": 39.213806330757656,
+  "corruption_error": 0.6078619366924234,
+  "relative_robustness": 0.44748358865405075,
+  "total_eval_time": 25.76723861694336
+}

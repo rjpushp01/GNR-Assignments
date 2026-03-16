@@ -26,6 +26,7 @@ from utils.visualization import (
 from utils.model_utils import MODEL_CONFIGS
 
 
+
 def run(model_name: str, data_root: str, save_dir: str, device: torch.device):
     """Run Scenario 1: Linear Probe Transfer."""
     print(f"\n{'='*60}")
@@ -35,13 +36,16 @@ def run(model_name: str, data_root: str, save_dir: str, device: torch.device):
 
     cfg = MODEL_CONFIGS[model_name]
 
-    # ── Load data ──────────────────────────────────────────────────────────
+    import time
+    t_dataset_start = time.time()
     train_loader, val_loader, class_names = get_dataloaders(
         model_name=model_name,
         data_root=data_root,
         pct=1.0,
         seed=42,
     )
+    dataset_setup_time = time.time() - t_dataset_start
+    print(f"  Dataset setup took: {dataset_setup_time:.2f}s")
     print(f"  Train samples: {len(train_loader.dataset)} | Val samples: {len(val_loader.dataset)}")
     print(f"  Classes: {len(class_names)}")
 
@@ -84,7 +88,7 @@ def run(model_name: str, data_root: str, save_dir: str, device: torch.device):
     # Reload best weights
     model.load_state_dict(torch.load(os.path.join(save_dir, "best_model.pth"), map_location=device))
     criterion = nn.CrossEntropyLoss()
-    _, best_val_acc, cm = validate(
+    _, best_val_acc, cm, _ = validate(
         model, val_loader, criterion, device,
         num_classes=len(class_names), return_cm=True,
     )
@@ -109,9 +113,13 @@ def run(model_name: str, data_root: str, save_dir: str, device: torch.device):
         "scenario": "linear_probe",
         "model": model_name,
         "best_val_acc": history["best_val_acc"],
-        "final_train_acc": history["train_acc"][-1],
-        "final_val_acc": history["val_acc"][-1],
         "trainable_pct": param_info["trainable_pct"],
+        "total_training_time": history.get("total_time"),
+        "train_pass_time": history.get("total_train_pass_time"),
+        "val_pass_time": history.get("total_val_pass_time"),
+        "data_fetch_time": history.get("total_data_fetch_time"),
+        "dataset_setup_time": dataset_setup_time,
+        "avg_epoch_time": history.get("avg_epoch_time"),
         **{k: model_info[k] for k in ["total_params", "trainable_params", "macs_str", "flops_str"] if k in model_info},
     }
     save_metrics_json(metrics, os.path.join(save_dir, "metrics.json"))

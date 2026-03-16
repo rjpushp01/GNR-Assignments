@@ -15,7 +15,7 @@ MODEL_CONFIGS = {
     "resnet50": {
         "timm_name": "resnet50",
         "input_size": 224,
-        "batch_size": 64,
+        "batch_size": 32,
         "lr": 1e-3,
         "epochs_full": 30,
         "epochs_fewshot": 20,
@@ -31,7 +31,7 @@ MODEL_CONFIGS = {
     "densenet121": {
         "timm_name": "densenet121",
         "input_size": 224,
-        "batch_size": 64,
+        "batch_size": 32,
         "lr": 1e-3,
         "epochs_full": 30,
         "epochs_fewshot": 20,

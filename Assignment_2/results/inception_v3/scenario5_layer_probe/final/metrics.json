@@ -1,0 +1,18 @@
+{
+  "scenario": "layer_probe",
+  "model": "inception_v3",
+  "depth": "final",
+  "layer_name": "Mixed_7c",
+  "feature_dim": 2048,
+  "best_val_acc": 88.49472999572754,
+  "feature_norms": {
+    "mean_norm": 22.753284454345703,
+    "std_norm": 2.8923275470733643,
+    "min_norm": 13.631877899169922,
+    "max_norm": 33.580955505371094
+  },
+  "extraction_time": 56.22881031036377,
+  "total_train_time": 1.1653358936309814,
+  "avg_epoch_time": 0.023295769691467284,
+  "total_scenario_time": 70.84536910057068
+}

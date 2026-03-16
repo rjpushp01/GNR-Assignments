@@ -1,0 +1,12 @@
+{
+  "scenario": "corruption_robustness",
+  "model": "resnet50",
+  "corruption": "gaussian_0.05",
+  "corruption_type": "gaussian",
+  "severity": 0.05,
+  "clean_acc": 85.81016299137104,
+  "corrupted_acc": 15.963566636136257,
+  "corruption_error": 0.8403643336386375,
+  "relative_robustness": 0.18603351956972197,
+  "total_eval_time": 15.886354684829712
+}

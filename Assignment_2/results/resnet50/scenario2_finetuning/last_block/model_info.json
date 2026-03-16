@@ -1,0 +1,11 @@
+{
+  "model_name": "resnet50",
+  "total_params": 23569502,
+  "trainable_params": 15026206,
+  "frozen_params": 8543296,
+  "trainable_pct": 63.75275133093605,
+  "macs": 4130449438,
+  "flops": 8260898876,
+  "macs_str": "4.130 GMac",
+  "flops_str": "8.261 GFlops"
+}
