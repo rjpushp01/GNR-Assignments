@@ -21,9 +21,6 @@ tests/*.so
 data_1/
 data_2/
 
-# Temporary Data
-*.pkl
-
 # Logs
 *.log
 
