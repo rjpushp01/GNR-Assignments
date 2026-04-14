@@ -32,6 +32,7 @@ def load_model(path, model):
         params = pickle.load(f)
         
     for name, layer in model.__dict__.items():
+        w_key = name + '.weight'
         if hasattr(layer, 'weight') and w_key in params:
             p = params[w_key]
             layer.weight.data = mb.Tensor(p['shape'], p['data'])
