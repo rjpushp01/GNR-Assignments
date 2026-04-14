@@ -1,0 +1,8 @@
+numpy
+matplotlib
+seaborn
+opencv-python
+pybind11
+cmake
+scikit-learn
+tqdm

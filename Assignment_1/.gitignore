@@ -26,10 +26,10 @@ data_2/
 
 # Logs
 *.log
-*.csv
 
 # Text files
-*.txt
+!CMakeLists.txt
+!requirements.txt
 
 # Editor/IDE
 .DS_Store

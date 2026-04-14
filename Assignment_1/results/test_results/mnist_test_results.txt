@@ -1,0 +1,12 @@
+============================================================
+Evaluation — MNIST
+Run timestamp     : 2026-02-14 12:19:11
+============================================================
+Model path        : results/mnist_model.pkl
+Test samples      : 6009
+Test Accuracy     : 0.9683  (96.83%)
+Data loading time : 0.22s
+Evaluation time   : 2.86s
+Trainable params  : 61,684
+MACs / forward    : 416,520
+FLOPs / forward   : 833,040
