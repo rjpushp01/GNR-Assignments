@@ -36,3 +36,7 @@ data_2/
 
 # Jupyter Notebooks
 .ipynb_checkpoints
+
+# Exception for results directory (include everything regardless of restricted file types)
+!results/
+!results/**
