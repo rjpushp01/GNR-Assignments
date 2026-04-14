@@ -1,12 +1,12 @@
 ============================================================
 Evaluation — CIFAR
-Run timestamp     : 2026-02-14 16:51:30
+Run timestamp     : 2026-04-14 18:01:03
 ============================================================
 Model path        : results/models/cifar_model.pkl
 Test samples      : 5000
 Test Accuracy     : 0.4003  (40.03%)
-Data loading time : 0.13s
-Evaluation time   : 35.42s
+Data loading time : 0.21s
+Evaluation time   : 63.69s
 Trainable params  : 345,284
 MACs / forward    : 38,691,840
 FLOPs / forward   : 77,383,680
